@@ -1,0 +1,75 @@
+{
+  "name": "all1page",
+  "productName": "All1page",
+  "version": "1.0.0",
+  "private": true,
+  "description": "All1page — tek pencerede birden çok site; her panel kendi oturumuyla (Electron).",
+  "author": "Omer",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k -s first \"vite\" \"wait-on tcp:127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "dev:ui": "vite",
+    "build": "vite build",
+    "start": "npm run build && electron .",
+    "icon": "node scripts/make-icon.js",
+    "dir": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder --win nsis",
+    "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:portable": "npm run build && electron-builder --win portable",
+    "dist:publish": "npm run build && electron-builder --win nsis -p always"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.0.12",
+    "tailwindcss": "^4.3.3",
+    "vite": "^6.0.0",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.all1page.app",
+    "productName": "All1page",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "OmerTTech",
+      "repo": "All1page",
+      "releaseType": "release"
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "portable": {
+      "artifactName": "${productName}.exe"
+    }
+  }
+}

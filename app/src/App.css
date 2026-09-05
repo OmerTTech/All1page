@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 20% -10%, #1a2332 0%, #0f1117 55%);
+  color: #e6e9f0;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #dfe4ee;
+  border: 1px solid #2c3344;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.btn-ghost:hover {
+  filter: brightness(1.2);
+}
+
+/* Otomatik gizleme — çubuk gizlenince yükseklik sıfır */
+.bar-hidden [data-toolbar] {
+  height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom-width: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
