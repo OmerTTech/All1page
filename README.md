@@ -1,12 +1,8 @@
-<p align="center">
-  <b>All1page</b> · Tek pencerede sınırsız sekme — Unlimited Tabs in One Window · Bir pəncərədə limitsiz tablar
-</p>
-
 <div align="center">
 
-[![English](https://img.shields.io/badge/English-1A1B26?style=for-the-badge)](https://github.com/OmerTTech/All1page#english)
-[![Türkçe](https://img.shields.io/badge/T%C3%BCrk%C3%A7e-1A1B26?style=for-the-badge)](https://github.com/OmerTTech/All1page#t%C3%BCrk%C3%A7e)
-[![Azərbaycanca](https://img.shields.io/badge/Az%C9%99rbaycanca-1A1B26?style=for-the-badge)](https://github.com/OmerTTech/All1page#az%C9%99rbaycanca)
+[![English](https://img.shields.io/badge/English-4D5ECD?style=for-the-badge)](https://github.com/OmerTTech/All1page#english)
+[![Türkçe](https://img.shields.io/badge/T%C3%BCrk%C3%A7e-BC4D3C?style=for-the-badge)](https://github.com/OmerTTech/All1page#t%C3%BCrk%C3%A7e)
+[![Azərbaycanca](https://img.shields.io/badge/Az%C9%99rbaycanca-079A09?style=for-the-badge)](https://github.com/OmerTTech/All1page#az%C9%99rbaycanca)
 
 </div>
 
@@ -30,6 +26,12 @@
 <br/>
 
 </div>
+
+---
+
+<p align="center">
+  <b>All1page</b> · Tek pencerede sınırsız sekme — Unlimited Tabs in One Window · Bir pəncərədə limitsiz tablar
+</p>
 
 ---
 
