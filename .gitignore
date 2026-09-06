@@ -1,8 +1,13 @@
 node_modules/
 dist/
 release/
-build/
+build/*
 .freebuff/
 /index.html
 *.log
 .DS_Store
+
+# build/ kaynak NSIS dosyaları repoda tutulur (gerisi oluşturulan çıktı)
+!build/nsis/
+!build/nsis/*
+!build/installer.nsh

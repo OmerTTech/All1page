@@ -2,10 +2,44 @@
 
 const { app, BrowserWindow, WebContentsView, ipcMain, shell, session, screen } = require("electron");
 const path = require("path");
+const { execFileSync } = require("child_process");
 const updater = require("./updater");
 
 const DEFAULT_URL = "https://gemini.google.com/app";
 const MAX_VIEWS = 96; // satır(8) × sütun(12) üst sınırı
+
+const INSTALLER_LANG_REG = "Software\\All1page";
+const INSTALLER_LANG_VALUE = "InstallerLang";
+
+// NSIS'teki yerel dil kimlikleri → uygulama dil kodu
+const LCID_TO_LANG = { 1033: "en", 1055: "tr", 2092: "az" };
+
+function readRegString(root, subkey, name) {
+  try {
+    const out = execFileSync(
+      "reg",
+      ["query", root + "\\" + subkey, "/v", name],
+      { encoding: "utf8", windowsHide: true, timeout: 5000 }
+    );
+    const m = /REG_SZ\s+([^\r\n]+)/.exec(out);
+    return m ? m[1].trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+// Kurulumda seçilen dil → "tr" / "en" / "az". Kayıt yoksa sistem diline bakar.
+function installerLang() {
+  const idText =
+    readRegString("HKCU", INSTALLER_LANG_REG, INSTALLER_LANG_VALUE) ||
+    readRegString("HKLM", INSTALLER_LANG_REG, INSTALLER_LANG_VALUE);
+  if (idText && LCID_TO_LANG[idText]) return LCID_TO_LANG[idText];
+  const loc = app.getLocale().toLowerCase();
+  if (loc.startsWith("az")) return "az";
+  if (loc.startsWith("tr")) return "tr";
+  if (loc.startsWith("en")) return "en";
+  return "tr";
+}
 
 // Google servisleri "Electron/…" kullanıcı ajanına kısıtlanmış içerik dönebiliyor;
 // gerçek Chromium sürümünü taşıyan temiz bir Chrome UA kullan.
@@ -34,6 +68,7 @@ let appZoom = 0; // panellerin ortak yakınlaştırma seviyesi (0 = %100)
 let autoHideOn = false; // çubuk otomatik gizleniyor mu
 let barRevealed = true; // çubuğun son bilinen görünürlüğü
 let cursorTimer = null; // fare konumu poll'u
+let settingsHidden = false; // ayarlar açıkken paneller gizli mi
 
 // Gizle/göster eşikleri (piksel, pencere üst kenarına göre):
 // fare en üstteki 6px'e gelirse çubuk görünür; 90px'in altına inerse gizlenir.
@@ -207,15 +242,20 @@ function destroyView(id) {
 }
 
 function createWindow() {
+  // Ekranın çalışma alanına otur; açılışta gerçek (OS) maximize uygulanır.
+  // "maximized:true" tek başına DPI küçültmesi olan ekranlarda pencerenin
+  // normal-kelepçelenmiş durumda kalmasına yol açabiliyordu.
+  const wa = screen.getPrimaryDisplay().workArea;
   win = new BrowserWindow({
-    width: 1440,
-    height: 900,
+    width: wa.width,
+    height: wa.height,
     minWidth: 900,
     minHeight: 560,
     title: "All1page",
     backgroundColor: "#0d1117",
     autoHideMenuBar: true,
     maximized: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -247,6 +287,14 @@ function createWindow() {
     win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }
 
+  // İlk boyanmadan önce maximize + göster → çerçevesiz değil, Windows'un
+  // Win+Up ile yaptığı gibi gerçek kenarlıklı maximize durumunda açılır.
+  win.once("ready-to-show", () => {
+    if (!win || win.isDestroyed()) return;
+    win.maximize();
+    win.show();
+  });
+
   win.on("closed", () => {
     if (cursorTimer) {
       clearInterval(cursorTimer);
@@ -261,6 +309,26 @@ ipcMain.on("grid:set-autohide", (_event, on) => {
 });
 
 ipcMain.handle("grid:get-version", () => app.getVersion());
+
+ipcMain.handle("grid:get-installer-lang", () => installerLang());
+
+// Ayarlar penceresi renderer içinde açılınca panellerin onu kapatmaması için
+// görünümler gizlenir; kapanınca son konumlarıyla geri gösterilir.
+ipcMain.on("grid:set-settings-overlay", (_event, open) => {
+  settingsHidden = !!open;
+  for (const id of Object.keys(views)) {
+    const v = views[id].view;
+    if (settingsHidden) {
+      v.setVisible(false);
+    } else {
+      const b = lastBounds[id];
+      if (!sleeping.has(Number(id)) && b) {
+        v.setBounds(b);
+        v.setVisible(b.width > 4 && b.height > 4);
+      }
+    }
+  }
+});
 
 /* ------------------------- IPC ------------------------- */
 
@@ -304,6 +372,10 @@ ipcMain.on("grid:set-layout", (_event, rects) => {
     };
     lastBounds[r.id] = b;
     if (sleeping.has(r.id)) continue; // uykudaki panel gizli kalır
+    if (settingsHidden) {
+      v.view.setVisible(false); // ayarlar açıkken panel üste çıkmaz
+      continue;
+    }
     v.view.setBounds(b);
     v.view.setVisible(b.width > 4 && b.height > 4);
   }

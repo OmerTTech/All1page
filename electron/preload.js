@@ -59,4 +59,10 @@ contextBridge.exposeInMainWorld("grid", {
   getVersion() {
     return ipcRenderer.invoke("grid:get-version");
   },
+  getInstallerLang() {
+    return ipcRenderer.invoke("grid:get-installer-lang");
+  },
+  setSettingsOverlay(open) {
+    ipcRenderer.send("grid:set-settings-overlay", !!open);
+  },
 });

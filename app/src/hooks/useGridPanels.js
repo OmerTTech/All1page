@@ -5,7 +5,8 @@ import {
   STORAGE_LAYOUT,
   STORAGE_DIMS,
   STORAGE_AUTOHIDE,
-  STORAGE_LANG,
+STORAGE_LANG,
+  STORAGE_LANG_MANUAL,
   STORAGE_GAP,
   STORAGE_START_FULLSCREEN,
   STORAGE_REMEMBER,
@@ -17,6 +18,20 @@ import {
   clampDim,
   panelCountFor,
 } from "../utils/helpers";
+
+function guessSystemLang() {
+  const n = (navigator.language || "").toLowerCase();
+  if (n.startsWith("az")) return "az";
+  if (n.startsWith("tr")) return "tr";
+  if (n.startsWith("en")) return "en";
+  return null;
+}
+
+function initLang() {
+  const saved = loadJson(STORAGE_LANG, null);
+  if (["tr", "en", "az"].includes(saved)) return saved;
+  return guessSystemLang() || "tr";
+}
 
 export function useGridPanels() {
   const [urls, setUrls] = useState(() => {
@@ -55,10 +70,27 @@ export function useGridPanels() {
   );
   const [barVisible, setBarVisible] = useState(true);
 
-  const [lang, setLang] = useState(() => {
-    const l = loadJson(STORAGE_LANG, "tr");
-    return ["tr", "en", "az"].includes(l) ? l : "tr";
-  });
+  const [lang, setLang] = useState(initLang);
+  const langManualRef = useRef(localStorage.getItem(STORAGE_LANG_MANUAL) === "true");
+
+  useEffect(() => {
+    // Kullanıcı ayarlardan elle dil seçmemişse, kurulumda seçilen dili (registry) uygula
+    if (langManualRef.current) return;
+    let mounted = true;
+    window.grid?.getInstallerLang?.().then((l) => {
+      if (mounted && ["tr", "en", "az"].includes(l) && l !== lang) setLang(l);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [lang]);
+
+  // Ayarlar ekranının kullandığı seçici: elle seçim yapınca kurulum dili bir daha geçersiz kalır
+  const setLangManual = (l) => {
+    langManualRef.current = true;
+    localStorage.setItem(STORAGE_LANG_MANUAL, "true");
+    setLang(l);
+  };
 
   const [gap, setGap] = useState(() => {
     const g = loadJson(STORAGE_GAP, 6);
@@ -251,7 +283,7 @@ export function useGridPanels() {
     setDim,
     updateUrl,
     lang,
-    setLang,
+    setLang: setLangManual,
     gap,
     setGap,
     startFullscreen,

@@ -6,6 +6,7 @@ export const STORAGE_LAYOUT = "gemini-grid-layout-v2";
 export const STORAGE_DIMS = "gemini-grid-dims-v1";
 export const STORAGE_AUTOHIDE = "gemini-grid-autohide-v1";
 export const STORAGE_LANG = "gemini-grid-lang-v1";
+export const STORAGE_LANG_MANUAL = "gemini-grid-lang-manual-v1";
 export const STORAGE_GAP = "gemini-grid-gap-v1";
 export const STORAGE_START_FULLSCREEN = "gemini-grid-startfs-v1";
 export const STORAGE_REMEMBER = "gemini-grid-remember-v1";

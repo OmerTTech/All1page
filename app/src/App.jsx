@@ -61,11 +61,19 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    window.grid?.setSettingsOverlay?.(settingsOpen);
+  }, [settingsOpen]);
+
+  useEffect(() => {
+    // "Tam Ekranla Başla" yalnız açılışta bir kez uygulanır; daha sonra
+    // kullanıcı tam ekrandan çıkınca yeniden fullscreen'e dönmez.
+    if (!startFullscreen) return;
     const t = setTimeout(() => {
-      if (startFullscreen && !isFullscreen) window.grid?.fullscreen();
+      if (!isFullscreen) window.grid?.fullscreen();
     }, 500);
     return () => clearTimeout(t);
-  }, [startFullscreen, isFullscreen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const wrapperClass =
     "h-full flex flex-col" + (autoHide && !barVisible ? " bar-hidden" : "");
