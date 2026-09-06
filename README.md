@@ -2,10 +2,11 @@
 
 # All1page
 
-### Tek Pencerede 4 Gemini — Masaüstü Uygulaması
+### Tek Pencerede Sınırsız Sekme — Masaüstü Uygulaması
 
-Electron tabanlı, her paneli kendi Google oturumunu tutan, 2×2 veya 1×4 ızgarada
-birden fazla Gemini sohbetini aynı anda çalıştıran masaüstü uygulaması.
+Electron tabanlı, her paneli kendi oturumunu tutan, ızgarada birden fazla web sitesini
+aynı anda çalıştıran masaüstü uygulaması. Gemini olsun, herhangi bir site olsun —
+hepsini tek pencerede aç.
 
 [![GitHub Release](https://img.shields.io/github/v/release/OmerTTech/All1page?style=flat-square&color=blue)](https://github.com/OmerTTech/All1page/releases/latest)
 [![GitHub Downloads](https://img.shields.io/github/downloads/OmerTTech/All1page/total?style=flat-square&color=green)](https://github.com/OmerTTech/All1page/releases/latest)
@@ -143,9 +144,9 @@ tarayıcı görünümü** (Electron `WebContentsView` + `persist:` session parti
 
 ## English
 
-### All1page — 4 Gemini in One Window (Desktop)
+### All1page — Unlimited Tabs in One Window (Desktop)
 
-An Electron desktop app that runs multiple Gemini chats simultaneously in a 2×2 or 1×4 grid, where each panel holds its own Google session.
+An Electron desktop app that runs multiple websites simultaneously in a grid layout, where each panel holds its own session. Gemini, or any other site — open them all in one window.
 
 [![GitHub Release](https://img.shields.io/github/v/release/OmerTTech/All1page?style=flat-square&color=blue)](https://github.com/OmerTTech/All1page/releases/latest)
 
@@ -188,9 +189,9 @@ Requires Node.js 18+.
 
 ## Azərbaycanca
 
-### All1page — Bir Pəncərədə 4 Gemini (Masaüstü)
+### All1page — Bir Pəncərədə Sınırsız Vərəq (Masaüstü)
 
-Hər panel öz Google sessiyasını saxlayan, 2×2 və ya 1×4 şəbəkədə eyni anda bir neçə Gemini söhbətini işə salan Electron masaüstü tətbiqi.
+Hər panel öz sessiyasını saxlayan, şəbəkədə birdən çox vebsaytı eyni anda işə salan Electron masaüstü tətbiqi. Gemini olsun, istənilən sayt olsun — hamısını bir pəncərədə açın.
 
 [![GitHub Release](https://img.shields.io/github/v/release/OmerTTech/All1page?style=flat-square&color=blue)](https://github.com/OmerTTech/All1page/releases/latest)
 
