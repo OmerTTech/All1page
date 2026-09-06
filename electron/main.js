@@ -215,6 +215,7 @@ function createWindow() {
     title: "All1page",
     backgroundColor: "#0d1117",
     autoHideMenuBar: true,
+    maximized: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -258,6 +259,8 @@ function createWindow() {
 ipcMain.on("grid:set-autohide", (_event, on) => {
   setAutoHide(!!on);
 });
+
+ipcMain.handle("grid:get-version", () => app.getVersion());
 
 /* ------------------------- IPC ------------------------- */
 

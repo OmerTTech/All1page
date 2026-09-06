@@ -13,10 +13,11 @@
     "start": "npm run build && electron .",
     "icon": "node scripts/make-icon.js",
     "dir": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder --win nsis",
-    "dist:win": "npm run build && electron-builder --win nsis",
-    "dist:portable": "npm run build && electron-builder --win portable",
-    "dist:publish": "npm run build && electron-builder --win nsis -p always && node scripts/publish.js"
+    "clean": "if exist release rd /s /q release && mkdir release",
+    "dist": "npm run clean && npm run build && electron-builder --win nsis",
+    "dist:win": "npm run clean && npm run build && electron-builder --win nsis",
+    "dist:portable": "npm run clean && npm run build && electron-builder --win portable",
+    "dist:publish": "npm run clean && npm run build && electron-builder --win nsis -p always && node scripts/publish.js"
   },
   "dependencies": {
     "electron-updater": "^6.8.9",

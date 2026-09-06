@@ -5,6 +5,13 @@ import {
   STORAGE_LAYOUT,
   STORAGE_DIMS,
   STORAGE_AUTOHIDE,
+  STORAGE_LANG,
+  STORAGE_GAP,
+  STORAGE_START_FULLSCREEN,
+  STORAGE_REMEMBER,
+  STORAGE_THEME,
+  STORAGE_PANELS,
+  STORAGE_STACK,
   loadJson,
   normalizeUrl,
   clampDim,
@@ -29,12 +36,47 @@ export function useGridPanels() {
     return { rows: clampDim(d && d.rows, 8), cols: clampDim(d && d.cols, 12) };
   });
 
-  const [panels, setPanels] = useState(() => [0, 1, 2, 3]);
+  const [rememberSession, setRememberSession] = useState(
+    () => loadJson(STORAGE_REMEMBER, true) !== false
+  );
+
+  const [panels, setPanels] = useState(() => {
+    if (rememberSession) {
+      const saved = loadJson(STORAGE_PANELS, null);
+      if (Array.isArray(saved) && saved.length > 0) {
+        return saved.filter((n) => Number.isFinite(n) && n >= 0);
+      }
+    }
+    return [0, 1, 2, 3];
+  });
   const [titles, setTitles] = useState([]);
   const [autoHide, setAutoHide] = useState(
     () => loadJson(STORAGE_AUTOHIDE, false) === true
   );
   const [barVisible, setBarVisible] = useState(true);
+
+  const [lang, setLang] = useState(() => {
+    const l = loadJson(STORAGE_LANG, "tr");
+    return ["tr", "en", "az"].includes(l) ? l : "tr";
+  });
+
+  const [gap, setGap] = useState(() => {
+    const g = loadJson(STORAGE_GAP, 6);
+    return Number.isFinite(g) ? Math.max(2, Math.min(20, g)) : 6;
+  });
+
+  const [startFullscreen, setStartFullscreen] = useState(
+    () => loadJson(STORAGE_START_FULLSCREEN, false) === true
+  );
+
+  const [theme, setTheme] = useState(() => {
+    const t = loadJson(STORAGE_THEME, "dark");
+    return ["dark", "light"].includes(t) ? t : "dark";
+  });
+
+  const [stack, setStack] = useState(
+    () => loadJson(STORAGE_STACK, false) === true
+  );
 
   const gridRef = useRef(null);
   const slotRefs = useRef({});
@@ -42,8 +84,23 @@ export function useGridPanels() {
   const panelCount = panelCountFor(layout, customDims);
 
   useEffect(() => {
-    setPanels(Array.from({ length: panelCount }, (_, i) => i));
+    setPanels((prev) => {
+      if (prev.length >= panelCount) return prev.slice(0, panelCount);
+      const next = prev.slice();
+      let idx = 0;
+      while (next.length < panelCount) {
+        while (next.includes(idx)) idx++;
+        next.push(idx);
+      }
+      return next;
+    });
   }, [panelCount]);
+
+  useEffect(() => {
+    if (rememberSession) {
+      localStorage.setItem(STORAGE_PANELS, JSON.stringify(panels));
+    }
+  }, [panels, rememberSession]);
 
   useEffect(() => {
     setUrls((prev) => {
@@ -77,7 +134,7 @@ export function useGridPanels() {
     const cleanup = syncPanels();
     return cleanup;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panels, layout, customDims, panelCount]);
+  }, [panels, layout, customDims, panelCount, gap, stack]);
 
   useEffect(() => {
     const el = gridRef.current;
@@ -85,9 +142,11 @@ export function useGridPanels() {
     const ro = new ResizeObserver(() => measure());
     ro.observe(el);
     window.addEventListener("resize", measure);
+    el.addEventListener("scroll", measure);
     return () => {
       ro.disconnect();
       window.removeEventListener("resize", measure);
+      el.removeEventListener("scroll", measure);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -122,7 +181,13 @@ export function useGridPanels() {
     localStorage.setItem(STORAGE_LAYOUT, JSON.stringify(layout));
     localStorage.setItem(STORAGE_DIMS, JSON.stringify(customDims));
     localStorage.setItem(STORAGE_AUTOHIDE, JSON.stringify(autoHide));
-  }, [urls, layout, customDims, autoHide]);
+    localStorage.setItem(STORAGE_LANG, JSON.stringify(lang));
+    localStorage.setItem(STORAGE_GAP, JSON.stringify(gap));
+    localStorage.setItem(STORAGE_START_FULLSCREEN, JSON.stringify(startFullscreen));
+    localStorage.setItem(STORAGE_REMEMBER, JSON.stringify(rememberSession));
+    localStorage.setItem(STORAGE_THEME, JSON.stringify(theme));
+    localStorage.setItem(STORAGE_STACK, JSON.stringify(stack));
+  }, [urls, layout, customDims, autoHide, lang, gap, startFullscreen, rememberSession, theme, stack]);
 
   const go = (id) => {
     window.grid?.navigate(id, normalizeUrl(urls[id]));
@@ -158,7 +223,9 @@ export function useGridPanels() {
     layout === "custom"
       ? {
           gridTemplateColumns: "repeat(" + customDims.cols + ", 1fr)",
-          gridTemplateRows: "repeat(" + customDims.rows + ", 1fr)",
+          gridTemplateRows: stack
+            ? "repeat(" + customDims.rows + ", minmax(calc(100vh - 48px), auto))"
+            : "repeat(" + customDims.rows + ", 1fr)",
         }
       : undefined;
 
@@ -183,5 +250,17 @@ export function useGridPanels() {
     toggleFullscreen,
     setDim,
     updateUrl,
+    lang,
+    setLang,
+    gap,
+    setGap,
+    startFullscreen,
+    setStartFullscreen,
+    rememberSession,
+    setRememberSession,
+    theme,
+    setTheme,
+    stack,
+    setStack,
   };
 }

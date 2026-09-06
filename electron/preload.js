@@ -56,4 +56,7 @@ contextBridge.exposeInMainWorld("grid", {
   installUpdate() {
     ipcRenderer.send("grid:install-update");
   },
+  getVersion() {
+    return ipcRenderer.invoke("grid:get-version");
+  },
 });

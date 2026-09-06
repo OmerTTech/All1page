@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { useGridPanels } from "./hooks/useGridPanels";
 import { useElectronBridge } from "./hooks/useElectronBridge";
 import { useUpdateChecker } from "./hooks/useUpdateChecker";
 import Toolbar from "./components/Toolbar/Toolbar";
 import Panel from "./components/Panel/Panel";
 import UpdateBanner from "./components/UpdateBanner/UpdateBanner";
+import Settings from "./components/Settings/Settings";
 
 export default function App() {
   const {
@@ -19,6 +21,18 @@ export default function App() {
     gridRef,
     slotRefs,
     gridStyle,
+    gap,
+    setGap,
+    lang,
+    setLang,
+    startFullscreen,
+    setStartFullscreen,
+    rememberSession,
+    setRememberSession,
+    theme,
+    setTheme,
+    stack,
+    setStack,
     go,
     closePanel,
     reloadAll,
@@ -29,18 +43,47 @@ export default function App() {
 
   const { isFullscreen } = useElectronBridge(autoHide, setBarVisible);
   const { update, installUpdate, dismiss } = useUpdateChecker();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [version, setVersion] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    window.grid?.getVersion?.().then((v) => {
+      if (mounted) setVersion(v || "");
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (startFullscreen && !isFullscreen) window.grid?.fullscreen();
+    }, 500);
+    return () => clearTimeout(t);
+  }, [startFullscreen, isFullscreen]);
 
   const wrapperClass =
-    "h-full flex flex-col" +
-    (autoHide && !barVisible ? " bar-hidden" : "");
+    "h-full flex flex-col" + (autoHide && !barVisible ? " bar-hidden" : "");
 
   const gridClass =
-    "flex-1 grid gap-1.5 p-1.5 min-h-0 min-w-0 " +
+    "flex-1 grid min-h-0 min-w-0 " +
+    (stack && layout === "custom" ? "stacked-scroll " : "") +
     (layout === "grid"
       ? "grid-cols-2 grid-rows-2"
       : layout === "row"
         ? "grid-cols-4 grid-rows-1"
         : "");
+
+  const gridStyleFinal = {
+    ...gridStyle,
+    gap: gap + "px",
+    padding: gap + "px",
+  };
 
   return (
     <div className={wrapperClass}>
@@ -55,9 +98,14 @@ export default function App() {
         setAutoHide={setAutoHide}
         toggleFullscreen={toggleFullscreen}
         isFullscreen={isFullscreen}
+        lang={lang}
+        version={version}
+        stack={stack}
+        setStack={setStack}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <main className={gridClass} ref={gridRef} style={gridStyle}>
+      <main className={gridClass} ref={gridRef} style={gridStyleFinal}>
         {panels.map((id) => (
           <Panel
             key={id}
@@ -67,11 +115,27 @@ export default function App() {
             onChangeUrl={updateUrl}
             onClose={closePanel}
             slotRefs={slotRefs}
+            lang={lang}
           />
         ))}
       </main>
 
-      <UpdateBanner update={update} onInstall={installUpdate} onDismiss={dismiss} />
+      <UpdateBanner update={update} onInstall={installUpdate} onDismiss={dismiss} lang={lang} />
+
+      <Settings
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        lang={lang}
+        setLang={setLang}
+        gap={gap}
+        setGap={setGap}
+        startFullscreen={startFullscreen}
+        setStartFullscreen={setStartFullscreen}
+        rememberSession={rememberSession}
+        setRememberSession={setRememberSession}
+        theme={theme}
+        setTheme={setTheme}
+      />
     </div>
   );
 }
