@@ -16,7 +16,7 @@
     "dist": "npm run build && electron-builder --win nsis",
     "dist:win": "npm run build && electron-builder --win nsis",
     "dist:portable": "npm run build && electron-builder --win portable",
-    "dist:publish": "npm run build && electron-builder --win nsis -p always"
+    "dist:publish": "npm run build && electron-builder --win nsis -p always && node scripts/publish.js"
   },
   "dependencies": {
     "electron-updater": "^6.8.9",
