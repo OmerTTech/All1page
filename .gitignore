@@ -11,3 +11,9 @@ build/*
 !build/nsis/
 !build/nsis/*
 !build/installer.nsh
+
+# Hazır ikon repoda tutulur (dönüştürücü betik gerektirmez)
+!build/icon.ico
+
+# AI/kullanıcı talimatları repoda olmasın
+AGENTS.md

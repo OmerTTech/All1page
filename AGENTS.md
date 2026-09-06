@@ -1,2 +1,0 @@
-Hep türkçe yaz
-

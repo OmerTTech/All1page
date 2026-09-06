@@ -1,10 +1,18 @@
+<p align="center">
+  <b>All1page</b> · Tek pencerede sınırsız sekme — Unlimited Tabs in One Window · Bir pəncərədə limitsiz tablar
+</p>
+
 <div align="center">
 
 [![English](https://img.shields.io/badge/English-1A1B26?style=for-the-badge)](https://github.com/OmerTTech/All1page#english)
 [![Türkçe](https://img.shields.io/badge/T%C3%BCrk%C3%A7e-1A1B26?style=for-the-badge)](https://github.com/OmerTTech/All1page#t%C3%BCrk%C3%A7e)
 [![Azərbaycanca](https://img.shields.io/badge/Az%C9%99rbaycanca-1A1B26?style=for-the-badge)](https://github.com/OmerTTech/All1page#az%C9%99rbaycanca)
 
-<br/>
+</div>
+
+---
+
+<div align="center">
 
 # All1page
 
@@ -73,7 +81,7 @@ npm run dist:publish       # build + Setup + latest.yml → publish to GitHub Re
 ### Releasing a New Version
 
 ```bash
-npm version 1.1.0          # set the version
+npm version 1.2.1          # set the version
 npm run dist:publish       # build + upload Setup + latest.yml to GitHub Release
 git push && git push --tags # push code and the tag
 ```
@@ -83,6 +91,12 @@ Set `GH_TOKEN` once (persistent on Windows):
 ```bash
 setx GH_TOKEN "github_pat_..."
 ```
+
+### Version History
+
+- **v1.2.0** — Azerbaijani installer language; the app follows the installer language; Settings panel opens above the panels; real OS-level maximize on startup; fullscreen exit-loop fix; pre-built icon (no converter needed)
+- **v1.1.0** — Settings menu, themes, stack mode, design refresh
+- **v1.0.0** — Initial release
 
 ---
 
@@ -168,13 +182,13 @@ app/
       useElectronBridge.js   ← Ana süreç iletişimi
       useUpdateChecker.js    ← Güncelleme kontrolü
 build/
-  icon.png         ← Uygulama ikonu
+  icon.ico         ← Uygulama ikonu (hazır dosya)
 ```
 
 #### Yeni Sürüm Yayınlama
 
 ```bash
-npm version 1.1.0          # sürümü belirle
+npm version 1.2.1          # sürümü belirle
 npm run dist:publish       # build + Setup + latest.yml → GitHub Release'e yükle
 git push && git push --tags # kodu ve etiketi GitHub'a gönder
 ```
@@ -209,6 +223,12 @@ tarayıcı görünümü** (Electron `WebContentsView` + `persist:` session parti
 - **Frontend:** React 18 + Vite + Tailwind CSS v4
 - **Oturum:** `persist:gemini-0..n` partition — her panel bağımsız çerez deposu
 - **Güncelleme:** `electron-updater` + GitHub Releases (`latest.yml`)
+
+### Sürüm Geçmişi
+
+- **v1.2.0** — Azərbaycanca kurulumcu dili; uygulama kurulum dilinde açılır; Ayarlar panellerin üstünde; açılışta gerçek OS düzeyinde ekranı kapla; tam ekran çıkışı tekrar döngüsü düzeltmesi; hazır ikon (dönüştürücü gerekmez)
+- **v1.1.0** — Ayarlar menüsü, temalar, yığın modu, tasarım yenilemesi
+- **v1.0.0** — İlk sürüm
 
 ---
 
@@ -260,7 +280,7 @@ npm run dist:publish       # build + Setup + latest.yml → GitHub Release-ə y�
 ### Yeni Versiya Yayımlama
 
 ```bash
-npm version 1.1.0          # versiyanı təyin edin
+npm version 1.2.1          # versiyanı təyin edin
 npm run dist:publish       # build + Setup + latest.yml → GitHub Release-ə yüklə
 git push && git push --tags # kodu və teqi GitHub-a göndərin
 ```
@@ -270,3 +290,9 @@ git push && git push --tags # kodu və teqi GitHub-a göndərin
 ```bash
 setx GH_TOKEN "github_pat_..."
 ```
+
+### Versiya tarixçəsi
+
+- **v1.2.0** — Azərbaycanca quraşdırıcı dili; tətbiq quraşdırıcı dilində açılır; Ayarlar panellərin üstündə; açılışda real OS səviyyəli tam ekran; tam ekrandan çıxanda təkrarlanma döngüsü düzəlişi; hazır ikon (çevirici tələb olunmur)
+- **v1.1.0** — Ayarlar menyusu, mövzular, yığın rejimi, dizayn yeniləməsi
+- **v1.0.0** — İlk buraxılış
