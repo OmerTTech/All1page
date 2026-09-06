@@ -5,6 +5,9 @@
 [![Azərbaycanca](https://img.shields.io/badge/Az%C9%99rbaycanca-079A09?style=for-the-badge)](https://github.com/OmerTTech/All1page#az%C9%99rbaycanca)
 
 </div>
+<p align="center">
+  Unlimited Tabs in One Window — Tek pencerede sınırsız sekme — Bir pəncərədə limitsiz tablar
+</p>
 
 ---
 
@@ -26,12 +29,6 @@
 <br/>
 
 </div>
-
----
-
-<p align="center">
-  <b>All1page</b> · Tek pencerede sınırsız sekme — Unlimited Tabs in One Window · Bir pəncərədə limitsiz tablar
-</p>
 
 ---
 
