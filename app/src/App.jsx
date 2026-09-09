@@ -3,9 +3,10 @@ import { useGridPanels } from "./hooks/useGridPanels";
 import { useElectronBridge } from "./hooks/useElectronBridge";
 import { useUpdateChecker } from "./hooks/useUpdateChecker";
 import Toolbar from "./components/Toolbar/Toolbar";
-import Panel from "./components/Panel/Panel";
+import Panel, { EmptyCell } from "./components/Panel/Panel";
 import UpdateBanner from "./components/UpdateBanner/UpdateBanner";
 import Settings from "./components/Settings/Settings";
+import { cellKey } from "./utils/helpers";
 
 export default function App() {
   const {
@@ -13,7 +14,7 @@ export default function App() {
     layout,
     setLayout,
     customDims,
-    panels,
+    cells,
     autoHide,
     setAutoHide,
     barVisible,
@@ -33,13 +34,58 @@ export default function App() {
     setTheme,
     stack,
     setStack,
+    defaultUrl,
+    setDefaultUrl,
     go,
+    openPanel,
     closePanel,
+    swapCells,
     reloadAll,
     toggleFullscreen,
     setDim,
     updateUrl,
+    rows,
+    cols,
+    activeCount,
+    panelCount,
   } = useGridPanels();
+
+  const [swapMode, setSwapMode] = useState(false);
+  const [swapSel, setSwapSel] = useState(null);
+
+  useEffect(() => {
+    if (!swapMode) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setSwapMode(false);
+        setSwapSel(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [swapMode]);
+
+  const toggleSwap = () => {
+    setSwapMode((v) => {
+      if (v) setSwapSel(null);
+      return !v;
+    });
+  };
+
+  const handleCellClick = (key) => {
+    if (!swapMode) return;
+    if (swapSel === null) {
+      setSwapSel(key);
+      return;
+    }
+    if (swapSel === key) {
+      setSwapSel(null);
+      return;
+    }
+    swapCells(swapSel, key);
+    setSwapMode(false);
+    setSwapSel(null);
+  };
 
   const { isFullscreen } = useElectronBridge(autoHide, setBarVisible);
   const { update, installUpdate, dismiss } = useUpdateChecker();
@@ -80,18 +126,55 @@ export default function App() {
 
   const gridClass =
     "flex-1 grid min-h-0 min-w-0 " +
-    (stack && layout === "custom" ? "stacked-scroll " : "") +
-    (layout === "grid"
-      ? "grid-cols-2 grid-rows-2"
-      : layout === "row"
-        ? "grid-cols-4 grid-rows-1"
-        : "");
+    (stack && layout === "custom" ? "stacked-scroll " : "");
 
   const gridStyleFinal = {
     ...gridStyle,
     gap: gap + "px",
     padding: gap + "px",
   };
+
+  const cellsGrid = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const key = cellKey(r, c);
+      const id = cells[key];
+      const cellStyle = { gridColumn: c + 1, gridRow: r + 1 };
+      const commonSwap = {
+        swapActive: swapMode,
+        selected: swapSel === key,
+        onSwapClick: () => handleCellClick(key),
+      };
+      if (id == null) {
+        cellsGrid.push(
+          <EmptyCell
+            key={key}
+            style={cellStyle}
+            onOpen={(url) => openPanel(r, c, url)}
+            defaultUrl={defaultUrl}
+            lang={lang}
+            {...commonSwap}
+          />
+        );
+      } else {
+        cellsGrid.push(
+          <Panel
+            key={key}
+            id={id}
+            style={cellStyle}
+            url={urls[id] || defaultUrl}
+            defaultUrl={defaultUrl}
+            onNavigate={go}
+            onChangeUrl={updateUrl}
+            onClose={closePanel}
+            slotRefs={slotRefs}
+            lang={lang}
+            {...commonSwap}
+          />
+        );
+      }
+    }
+  }
 
   return (
     <div className={wrapperClass}>
@@ -100,7 +183,8 @@ export default function App() {
         setLayout={setLayout}
         customDims={customDims}
         setDim={setDim}
-        panels={panels}
+        activeCount={activeCount}
+        panelCount={panelCount}
         reloadAll={reloadAll}
         autoHide={autoHide}
         setAutoHide={setAutoHide}
@@ -110,22 +194,13 @@ export default function App() {
         version={version}
         stack={stack}
         setStack={setStack}
+        swapMode={swapMode}
+        onToggleSwap={toggleSwap}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <main className={gridClass} ref={gridRef} style={gridStyleFinal}>
-        {panels.map((id) => (
-          <Panel
-            key={id}
-            id={id}
-            url={urls[id]}
-            onNavigate={go}
-            onChangeUrl={updateUrl}
-            onClose={closePanel}
-            slotRefs={slotRefs}
-            lang={lang}
-          />
-        ))}
+        {cellsGrid}
       </main>
 
       <UpdateBanner update={update} onInstall={installUpdate} onDismiss={dismiss} lang={lang} />
@@ -143,6 +218,8 @@ export default function App() {
         setRememberSession={setRememberSession}
         theme={theme}
         setTheme={setTheme}
+        defaultUrl={defaultUrl}
+        setDefaultUrl={setDefaultUrl}
       />
     </div>
   );

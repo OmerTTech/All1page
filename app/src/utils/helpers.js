@@ -1,18 +1,19 @@
 export const DEFAULT_URL = "https://gemini.google.com/app";
 export const MAX_CELLS = 8 * 12;
 
-export const STORAGE_URLS = "gemini-grid-urls-v1";
-export const STORAGE_LAYOUT = "gemini-grid-layout-v2";
-export const STORAGE_DIMS = "gemini-grid-dims-v1";
-export const STORAGE_AUTOHIDE = "gemini-grid-autohide-v1";
-export const STORAGE_LANG = "gemini-grid-lang-v1";
-export const STORAGE_LANG_MANUAL = "gemini-grid-lang-manual-v1";
-export const STORAGE_GAP = "gemini-grid-gap-v1";
-export const STORAGE_START_FULLSCREEN = "gemini-grid-startfs-v1";
-export const STORAGE_REMEMBER = "gemini-grid-remember-v1";
-export const STORAGE_THEME = "gemini-grid-theme-v1";
-export const STORAGE_PANELS = "gemini-grid-panels-v1";
-export const STORAGE_STACK = "gemini-grid-stack-v1";
+export const STORAGE_URLS = "all1page-urls-v1";
+export const STORAGE_LAYOUT = "all1page-layout-v2";
+export const STORAGE_DIMS = "all1page-dims-v1";
+export const STORAGE_AUTOHIDE = "all1page-autohide-v1";
+export const STORAGE_LANG = "all1page-lang-v1";
+export const STORAGE_LANG_MANUAL = "all1page-lang-manual-v1";
+export const STORAGE_GAP = "all1page-gap-v1";
+export const STORAGE_START_FULLSCREEN = "all1page-startfs-v1";
+export const STORAGE_REMEMBER = "all1page-remember-v1";
+export const STORAGE_THEME = "all1page-theme-v1";
+export const STORAGE_PANELS = "all1page-panels-v1";
+export const STORAGE_STACK = "all1page-stack-v1";
+export const STORAGE_DEFAULT_URL = "all1page-default-url-v1";
 
 export const REVEAL_ZONE = 6;
 export const HIDE_THRESHOLD = 90;
@@ -45,4 +46,100 @@ export function panelCountFor(layout, dims) {
     return Math.max(1, Math.min(MAX_CELLS, dims.rows * dims.cols));
   }
   return 4;
+}
+
+export function rowsColsFor(layout, dims) {
+  if (layout === "custom") {
+    return {
+      rows: clampDim(dims && dims.rows, 8),
+      cols: clampDim(dims && dims.cols, 12),
+    };
+  }
+  if (layout === "grid") return { rows: 2, cols: 2 };
+  return { rows: 1, cols: 4 };
+}
+
+export function cellKey(row, col) {
+  return Number(row) + ":" + Number(col);
+}
+
+export function keyToCell(key) {
+  const p = String(key).split(":");
+  return { row: Number(p[0]), col: Number(p[1]) };
+}
+
+// Grid boyutu küçülünce sınıra uymayan panelleri (mümkünse) boş hücrelere taşır;
+// sığmayanlar korunur ve grid yeniden büyüyünce geri gelir.
+export function reflowCells(cells, rows, cols) {
+  const inBounds = {};
+  const overflow = [];
+  for (const [k, id] of Object.entries(cells || {})) {
+    const { row, col } = keyToCell(k);
+    if (row < rows && col < cols) inBounds[k] = id;
+    else overflow.push(id);
+  }
+  if (!overflow.length) return cells;
+  const next = { ...inBounds };
+  for (let r = 0; r < rows && overflow.length; r++) {
+    for (let c = 0; c < cols && overflow.length; c++) {
+      const k = cellKey(r, c);
+      if (next[k] != null) continue;
+      next[k] = overflow.shift();
+    }
+  }
+  return next;
+}
+
+// İlk açılış: layout'a göre ilk 4 hücreye 0,1,2,3 yerleştirir.
+export function initialCellsFor(layout, dims) {
+  const { rows, cols } = rowsColsFor(layout, dims);
+  const total = rows * cols;
+  const cells = {};
+  for (let i = 0; i < Math.min(4, total); i++) {
+    cells[cellKey(Math.floor(i / cols), i % cols)] = i;
+  }
+  return cells;
+}
+
+export const PANELS_V2 = 2;
+
+// Kayıtlı panel durumunu okur; yeni {v:2,cells,urls} formatı varsa döndürür,
+// eski number[] formatını da mevcut layout/dims ile "row:col" haritasına çevirir.
+export function parseSavedPanels() {
+  const raw = loadJson(STORAGE_PANELS, null);
+  if (!raw) return null;
+
+  if (raw.v === PANELS_V2 && raw.cells && typeof raw.cells === "object") {
+    const cells = {};
+    for (const k of Object.keys(raw.cells)) {
+      const id = Number(raw.cells[k]);
+      if (Number.isFinite(id) && id >= 0) cells[k] = id;
+    }
+    if (!Object.keys(cells).length) return null;
+    const urls = {};
+    if (raw.urls && typeof raw.urls === "object") {
+      for (const k of Object.keys(raw.urls)) urls[k] = normalizeUrl(raw.urls[k]);
+    }
+    return { cells, urls };
+  }
+
+  if (Array.isArray(raw)) {
+    const savedLayout = loadJson(STORAGE_LAYOUT, "row");
+    const layout = ["grid", "row", "custom"].includes(savedLayout) ? savedLayout : "row";
+    const dims = loadJson(STORAGE_DIMS, { rows: 1, cols: 3 });
+    const { rows, cols } = rowsColsFor(layout, dims);
+    const legacyUrls = loadJson(STORAGE_URLS, null);
+    const cells = {};
+    const urls = {};
+    raw.forEach((idVal, i) => {
+      const id = Number(idVal);
+      if (!Number.isFinite(id) || id < 0) return;
+      cells[cellKey(Math.floor(i / cols), i % cols)] = id;
+      const u = Array.isArray(legacyUrls) ? legacyUrls[id] : null;
+      if (typeof u === "string" && u.trim()) urls[id] = normalizeUrl(u);
+    });
+    return Object.keys(cells).length ? { cells, urls } : null;
+  }
+
+  return null;
 }

@@ -76,6 +76,23 @@ button {
   filter: brightness(1.2);
 }
 
+/* İkon-only araç çubuğu düğmesi (genişlikten tasarruf; açıklama title'da) */
+.btn-icon {
+  background: var(--c-btn);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+
+.btn-icon:hover {
+  filter: brightness(1.2);
+}
+
 /* Araç çubuğundaki düğme grubu (2×2 / 1×4 / Custom) — ghost butonla birebir aynı ölçü */
 .seg-btn {
   padding: 5px 12px;

@@ -5,7 +5,8 @@ export default function Toolbar({
   setLayout,
   customDims,
   setDim,
-  panels,
+  activeCount,
+  panelCount,
   reloadAll,
   autoHide,
   setAutoHide,
@@ -15,19 +16,21 @@ export default function Toolbar({
   version,
   stack,
   setStack,
+  swapMode,
+  onToggleSwap,
   onOpenSettings,
 }) {
   return (
     <header
       data-toolbar
-      className="flex flex-wrap items-center gap-2.5 px-4 py-1.5 shrink-0 bg-[var(--c-toolbar)] border-b border-[var(--c-border-soft)]"
+      className="flex flex-nowrap items-center gap-2 px-4 py-1.5 shrink-0 overflow-x-auto bg-[var(--c-toolbar)] border-b border-[var(--c-border-soft)]"
     >
-      <div className="flex items-center gap-2.5 mr-1.5">
+      <div className="flex items-center gap-2 mr-1.5">
         <h1 className="text-[15px] font-bold whitespace-nowrap bg-gradient-to-r from-[#7ab3ff] to-[#b08cff] bg-clip-text text-transparent">
           {t(lang, "appName")}
         </h1>
         {version && (
-          <span className="text-[10px] font-medium text-[var(--c-text-mute)] select-none">
+          <span className="hidden md:inline text-[10px] font-medium text-[var(--c-text-mute)] select-none">
             v{version}
           </span>
         )}
@@ -59,7 +62,7 @@ export default function Toolbar({
       </div>
 
       {layout === "custom" && (
-        <div className="flex items-center gap-2.5 text-xs text-[var(--c-text-faint)]">
+        <div className="flex items-center gap-2 text-xs text-[var(--c-text-faint)]">
           <label className="flex items-center gap-1.5">
             {t(lang, "rows")}
             <input
@@ -83,10 +86,10 @@ export default function Toolbar({
             />
           </label>
           <span className="text-[11px] text-[var(--c-text-mute)]">
-            {panels.length} {t(lang, "panel")}
+            {activeCount}/{panelCount}
           </span>
           <label
-            className="flex items-center gap-1.5 cursor-pointer select-none"
+            className="flex items-center gap-1.5 cursor-pointer select-none whitespace-nowrap"
             title={t(lang, "stackModeHint")}
           >
             <button
@@ -108,16 +111,30 @@ export default function Toolbar({
         </div>
       )}
 
-      <button className="btn-ghost" onClick={reloadAll}>
-        ⟳ {t(lang, "reloadAll")}
-      </button>
-
-      <div className="flex items-center gap-2 ml-auto">
+      <div className="flex items-center gap-1.5">
+        <button className="btn-icon" onClick={reloadAll} title={t(lang, "reloadAllHint")}>
+          ⟳
+        </button>
         <button
           className={
-            "btn-ghost" +
+            "btn-icon" +
+            (swapMode
+              ? " border-[#4a7dfc] text-[#9ec1ff] bg-[#4a7dfc]/15 ring-2 ring-[#4a7dfc]/60"
+              : "")
+          }
+          onClick={onToggleSwap}
+          title={t(lang, "swapHint")}
+        >
+          ⇄
+        </button>
+      </div>
+
+      <div className="flex items-center gap-1.5 ml-auto">
+        <button
+          className={
+            "btn-icon" +
             (autoHide
-              ? " border-[#4a7dfc] text-[#9ec1ff] bg-[#4a7dfc]/15 shadow-[inset_0_0_0_1px_rgba(74,125,252,0.25)]"
+              ? " border-[#4a7dfc] text-[#9ec1ff] bg-[#4a7dfc]/15 ring-2 ring-[#4a7dfc]/60"
               : "")
           }
           onClick={() => setAutoHide((v) => !v)}
@@ -127,21 +144,17 @@ export default function Toolbar({
               : "Çubuğu gizler; fare üst kenara gelince gösterir"
           }
         >
-          {autoHide ? t(lang, "autoHideOn") : t(lang, "autoHide")}
+          🖱️
         </button>
         <button
-          className="btn-ghost"
+          className="btn-icon"
           onClick={toggleFullscreen}
-          title={t(lang, "fullscreen")}
+          title={isFullscreen ? t(lang, "exitFullscreen") : t(lang, "fullscreen")}
         >
-          {isFullscreen ? t(lang, "exitFullscreen") : t(lang, "fullscreen")}
+          {isFullscreen ? "⤢" : "⛶"}
         </button>
-        <button
-          className="btn-ghost"
-          onClick={onOpenSettings}
-          title={t(lang, "settingsTitle")}
-        >
-          {t(lang, "settings")}
+        <button className="btn-icon" onClick={onOpenSettings} title={t(lang, "settingsTitle")}>
+          ⚙️
         </button>
       </div>
     </header>

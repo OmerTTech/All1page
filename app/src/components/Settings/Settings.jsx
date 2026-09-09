@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { t } from "../../i18n";
+import { normalizeUrl } from "../../utils/helpers";
 
 function Segmented({ options, value, onChange, title, hint }) {
   return (
@@ -79,12 +80,15 @@ export default function Settings({
   setRememberSession,
   theme,
   setTheme,
+  defaultUrl,
+  setDefaultUrl,
 }) {
   const [draftLang, setDraftLang] = useState(lang);
   const [draftGap, setDraftGap] = useState(gap);
   const [draftFs, setDraftFs] = useState(startFullscreen);
   const [draftRm, setDraftRm] = useState(rememberSession);
   const [draftTheme, setDraftTheme] = useState(theme);
+  const [draftDefaultUrl, setDraftDefaultUrl] = useState(defaultUrl);
 
   if (!open) return null;
 
@@ -94,6 +98,7 @@ export default function Settings({
     setStartFullscreen(draftFs);
     setRememberSession(draftRm);
     setTheme(draftTheme);
+    setDefaultUrl(normalizeUrl(draftDefaultUrl));
     onClose();
   };
 
@@ -125,6 +130,22 @@ export default function Settings({
         {/* body */}
         <div className="px-5 py-4 flex flex-col gap-5 max-h-[70vh] overflow-y-auto">
           <Section>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--c-text-dim)] mb-2">
+                {t(draftLang, "defaultUrl")}
+              </label>
+              <input
+                type="text"
+                value={draftDefaultUrl}
+                spellCheck={false}
+                onChange={(e) => setDraftDefaultUrl(e.target.value)}
+                className="w-full bg-[var(--c-elev)] border border-[var(--c-border)] rounded-lg px-3 py-2 text-xs font-mono text-[var(--c-text)] outline-none focus:border-[#4a7dfc]"
+              />
+              <p className="mt-2 text-[11px] text-[var(--c-text-mute)]">
+                {t(draftLang, "defaultUrlHint")}
+              </p>
+            </div>
+            <Divider />
             <Segmented
               title={t(lang, "language")}
               hint={t(lang, "languageHint")}
