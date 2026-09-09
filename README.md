@@ -95,6 +95,7 @@ setx GH_TOKEN "github_pat_..."
 
 ### Version History
 
+- **v1.3.1** — Reflow fix: panel order is preserved in row-major order when switching layouts (an empty cell left behind by a closed panel is filled by the same row's next panel, not the row below); layout buttons no longer auto-fill empty cells with the default site (start them with ▶ to keep performance); `reflowCells` is now immutable
 - **v1.3.0** — Cell-based grid (panels stay put when the grid changes); Swap mode (two-click panel exchange); default URL setting; "Reload All" fills empty cells with the default site; layout buttons fill empty cells; stack-mode toolbar clipping fix; storage keys renamed to `all1page-*`; compact icon-only toolbar
 - **v1.2.0** — Azerbaijani installer language; the app follows the installer language; Settings panel opens above the panels; real OS-level maximize on startup; fullscreen exit-loop fix; pre-built icon (no converter needed)
 - **v1.1.0** — Settings menu, themes, stack mode, design refresh
@@ -228,6 +229,7 @@ tarayıcı görünümü** (Electron `WebContentsView` + `persist:` session parti
 
 ### Sürüm Geçmişi
 
+- **v1.3.1** — Reflow onarımı: layout değişince panel sırası korunur (kapatılan hücrenin boşluğu alttaki değil aynı satırdaki sonraki panelle dolar); layout düğmeleri boş hücreleri varsayılan siteyle otomatik doldurmaz (performans için ▶ ile başlatılır); `reflowCells` artık immutable
 - **v1.3.0** — Hücre tabanlı ızgara (ızgara değişince paneller yerinde kalır); Yer Değiştir modu (iki tıklamayla panel takası); varsayılan URL ayarı; "Hepsini Yenile" boş hücreleri varsayılan siteyle doldurur; layout düğmeleri boş hücreleri doldurur; yığın modunda araç çubuğu kırpma düzeltmesi; depolama anahtarları `all1page-*`; kompakt ikon araç çubuğu
 - **v1.2.0** — Azərbaycanca kurulumcu dili; uygulama kurulum dilinde açılır; Ayarlar panellerin üstünde; açılışta gerçek OS düzeyinde ekranı kapla; tam ekran çıkışı tekrar döngüsü düzeltmesi; hazır ikon (dönüştürücü gerekmez)
 - **v1.1.0** — Ayarlar menüsü, temalar, yığın modu, tasarım yenilemesi
@@ -296,6 +298,7 @@ setx GH_TOKEN "github_pat_..."
 
 ### Versiya tarixçəsi
 
+- **v1.3.1** — Reflow təmiratı: layout dəyişəndə panel sırası qorunur (bağlanan xananın boşluğu aşağıdakı deyil, eyni sətirdəki sonrakı panellə dolar); layout düymələri boş xanaları defolt saytla avtomatik doldurmur (performans üçün ▶ ilə başladılır); `reflowCells` artıq immutable
 - **v1.3.0** — Hücrə əsaslı qrid (qrid dəyişəndə panellər yerində qalır); Yer Dəyişdir rejimi (iki kliklə panel mübadiləsi); defolt URL parametri; "Hamısını Yenilə" boş xanaları defolt saytla doldurur; layout düymələri boş xanaları doldurur; yığın rejimində alətlər paneli kırpma düzəlişi; depolama açarları `all1page-*`; yığcam ikon alətlər paneli
 - **v1.2.0** — Azərbaycanca quraşdırıcı dili; tətbiq quraşdırıcı dilində açılır; Ayarlar panellərin üstündə; açılışda real OS səviyyəli tam ekran; tam ekrandan çıxanda təkrarlanma döngüsü düzəlişi; hazır ikon (çevirici tələb olunmur)
 - **v1.1.0** — Ayarlar menyusu, mövzular, yığın rejimi, dizayn yeniləməsi
