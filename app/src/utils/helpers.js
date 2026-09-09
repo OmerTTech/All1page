@@ -68,23 +68,29 @@ export function keyToCell(key) {
   return { row: Number(p[0]), col: Number(p[1]) };
 }
 
-// Grid boyutu küçülünce sınıra uymayan panelleri (mümkünse) boş hücrelere taşır;
-// sığmayanlar korunur ve grid yeniden büyüyünce geri gelir.
+// Panelleri, önceki hücre konumlarının satır sırasına göre (üst-sol → sağ,
+// sonra alt satır → sağ) toplayıp yeni gridin satır-satır hücrelerine dizler.
+// Böylece layout değişince panel sırası korunur; kapatılan hücrenin boşluğunu
+// alttaki değil soldaki komşu doldurur, boşluklar en sağa/sona kayar.
+// ÖNEMLİ: Her çağrıda YENİ bir nesne döndürülür. Aynı referans dönerse React
+// setCells ile re-render etmez, syncPanels çalışmaz ve yeni paneller ana
+// sürece hiç gitmez (boş/çalışmayan paneller ortaya çıkar).
 export function reflowCells(cells, rows, cols) {
-  const inBounds = {};
-  const overflow = [];
-  for (const [k, id] of Object.entries(cells || {})) {
-    const { row, col } = keyToCell(k);
-    if (row < rows && col < cols) inBounds[k] = id;
-    else overflow.push(id);
-  }
-  if (!overflow.length) return cells;
-  const next = { ...inBounds };
-  for (let r = 0; r < rows && overflow.length; r++) {
-    for (let c = 0; c < cols && overflow.length; c++) {
-      const k = cellKey(r, c);
-      if (next[k] != null) continue;
-      next[k] = overflow.shift();
+  const ordered = Object.entries(cells || {}).sort(([ka], [kb]) => {
+    const a = keyToCell(ka);
+    const b = keyToCell(kb);
+    return a.row - b.row || a.col - b.col;
+  });
+  const next = {};
+  let r = 0;
+  let c = 0;
+  for (const [, id] of ordered) {
+    if (r >= rows) break;
+    next[cellKey(r, c)] = id;
+    c++;
+    if (c >= cols) {
+      c = 0;
+      r++;
     }
   }
   return next;

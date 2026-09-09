@@ -123,11 +123,6 @@ export function useGridPanels() {
     cellsRef.current = cells;
   }, [cells]);
 
-  const defaultUrlRef = useRef(defaultUrl);
-  useEffect(() => {
-    defaultUrlRef.current = defaultUrl;
-  }, [defaultUrl]);
-
   // Ölçüm her render'da güncellenir; mount edilen listener'lar en güncel ölçümü çalıştırır.
   const measureRef = useRef(() => {});
   useEffect(() => {
@@ -150,9 +145,9 @@ export function useGridPanels() {
     url: urlsById[id] || defaultUrl,
   }));
 
-  // Layout düğmesine (2×2 / 1×4 / Custom) basınca:
-  //  1) Sığmayan panelleri boş hücrelere taşı (reflow)
-  //  2) Boş kalan tüm hücreleri varsayılan siteyle doldur
+  // Layout düğmesine (2×2 / 1×4 / Custom) basınca sığmayan panelleri boş
+  // hücrelere taşı (reflow). Boş hücreler boş bırakılır; kullanıcı ▶ ile açmadan
+  // yeni WebContentsView oluşturulmaz (performans + tutarlı davranış).
   // Refresh atılmaz. İlk açılışta kayıtlı düzene dokunulmaz.
   const didInitRef = useRef(false);
   useEffect(() => {
@@ -160,29 +155,7 @@ export function useGridPanels() {
       didInitRef.current = true;
       return;
     }
-    const prev = cellsRef.current;
-    const next = reflowCells(prev, rows, cols);
-    const newIds = [];
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const key = cellKey(r, c);
-        if (next[key] == null) {
-          const id = idCounterRef.current++;
-          next[key] = id;
-          newIds.push(id);
-        }
-      }
-    }
-    if (newIds.length) {
-      setUrlsById((u) => {
-        const nu = { ...u };
-        newIds.forEach((id) => {
-          nu[id] = normalizeUrl(defaultUrlRef.current);
-        });
-        return nu;
-      });
-    }
-    setCells(next);
+    setCells((prev) => reflowCells(prev, rows, cols));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout]);
 
