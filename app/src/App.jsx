@@ -36,6 +36,8 @@ export default function App() {
     setStack,
     defaultUrl,
     setDefaultUrl,
+    promptSnippet,
+    setPromptSnippet,
     go,
     openPanel,
     closePanel,
@@ -72,6 +74,24 @@ export default function App() {
     });
   };
 
+  const hasGemini = Object.values(urls).some(
+    (u) => typeof u === "string" && u.includes("gemini.google.com")
+  );
+  const canInject = hasGemini && promptSnippet.trim().length > 0;
+
+  const injectPrompt = () => {
+    if (!canInject) return;
+    window.grid?.injectPrompt(promptSnippet).then((res) => {
+      if (!res || !res.ok) console.warn("inject-prompt:", res);
+    });
+  };
+
+  const openChromeLogin = () => {
+    window.grid?.openChromeLogin?.().then((res) => {
+      if (res && !res.ok) console.warn("open-chrome-login:", res.reason);
+    });
+  };
+
   const handleCellClick = (key) => {
     if (!swapMode) return;
     if (swapSel === null) {
@@ -91,11 +111,15 @@ export default function App() {
   const { update, installUpdate, dismiss } = useUpdateChecker();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [version, setVersion] = useState("");
+  const [chromeMode, setChromeMode] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     window.grid?.getVersion?.().then((v) => {
       if (mounted) setVersion(v || "");
+    });
+    window.grid?.getChromeMode?.().then((m) => {
+      if (mounted) setChromeMode(!!m);
     });
     return () => {
       mounted = false;
@@ -126,7 +150,7 @@ export default function App() {
 
   const gridClass =
     "flex-1 grid min-h-0 min-w-0 " +
-    (stack && layout === "custom" ? "stacked-scroll " : "");
+    (stack && layout !== "row" ? "stacked-scroll " : "");
 
   const gridStyleFinal = {
     ...gridStyle,
@@ -192,11 +216,14 @@ export default function App() {
         isFullscreen={isFullscreen}
         lang={lang}
         version={version}
+        chromeMode={chromeMode}
         stack={stack}
         setStack={setStack}
         swapMode={swapMode}
         onToggleSwap={toggleSwap}
         onOpenSettings={() => setSettingsOpen(true)}
+        onInjectPrompt={injectPrompt}
+        onOpenChromeLogin={openChromeLogin}
       />
 
       <main className={gridClass} ref={gridRef} style={gridStyleFinal}>
@@ -220,6 +247,8 @@ export default function App() {
         setTheme={setTheme}
         defaultUrl={defaultUrl}
         setDefaultUrl={setDefaultUrl}
+        promptSnippet={promptSnippet}
+        setPromptSnippet={setPromptSnippet}
       />
     </div>
   );

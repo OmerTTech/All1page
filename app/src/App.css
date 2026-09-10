@@ -93,6 +93,11 @@ button {
   filter: brightness(1.2);
 }
 
+.btn-icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 /* Araç çubuğundaki düğme grubu (2×2 / 1×4 / Custom) — ghost butonla birebir aynı ölçü */
 .seg-btn {
   padding: 5px 12px;

@@ -13,6 +13,7 @@ import {
   STORAGE_PANELS,
   STORAGE_STACK,
   STORAGE_DEFAULT_URL,
+  STORAGE_SNIPPET,
   loadJson,
   normalizeUrl,
   clampDim,
@@ -115,6 +116,12 @@ export function useGridPanels() {
   const [stack, setStack] = useState(
     () => loadJson(STORAGE_STACK, false) === true
   );
+
+  // Toolbar düğmesinin Gemini prompt kutusuna yazdığı sabit şablon
+  const [promptSnippet, setPromptSnippet] = useState(() => {
+    const v = loadJson(STORAGE_SNIPPET, null);
+    return typeof v === "string" && v.trim() ? v : "";
+  });
 
   const gridRef = useRef(null);
   const slotRefs = useRef({});
@@ -266,7 +273,8 @@ export function useGridPanels() {
     localStorage.setItem(STORAGE_THEME, JSON.stringify(theme));
     localStorage.setItem(STORAGE_STACK, JSON.stringify(stack));
     localStorage.setItem(STORAGE_DEFAULT_URL, JSON.stringify(defaultUrl));
-  }, [layout, customDims, autoHide, lang, gap, startFullscreen, rememberSession, theme, stack, defaultUrl]);
+    localStorage.setItem(STORAGE_SNIPPET, JSON.stringify(promptSnippet));
+  }, [layout, customDims, autoHide, lang, gap, startFullscreen, rememberSession, theme, stack, defaultUrl, promptSnippet]);
 
   const go = (id) => {
     window.grid?.navigate(id, normalizeUrl(urlsById[id] || defaultUrl));
@@ -350,7 +358,9 @@ export function useGridPanels() {
       : layout === "grid"
         ? {
             gridTemplateColumns: "repeat(2, 1fr)",
-            gridTemplateRows: "repeat(2, 1fr)",
+            gridTemplateRows: stack
+              ? "repeat(2, minmax(calc(100vh - 48px), auto))"
+              : "repeat(2, 1fr)",
           }
         : {
             gridTemplateColumns: "repeat(4, 1fr)",
@@ -397,5 +407,7 @@ export function useGridPanels() {
     setStack,
     defaultUrl,
     setDefaultUrl,
+    promptSnippet,
+    setPromptSnippet,
   };
 }

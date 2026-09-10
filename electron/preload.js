@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld("grid", {
   forward(id) {
     ipcRenderer.send("grid:forward", id);
   },
+  injectPrompt(text) {
+    return ipcRenderer.invoke("grid:inject-prompt", text);
+  },
   toggleSleep(id) {
     ipcRenderer.send("grid:sleep", id);
   },
@@ -58,6 +61,12 @@ contextBridge.exposeInMainWorld("grid", {
   },
   getVersion() {
     return ipcRenderer.invoke("grid:get-version");
+  },
+  getChromeMode() {
+    return ipcRenderer.invoke("grid:get-chrome-mode");
+  },
+  openChromeLogin() {
+    return ipcRenderer.invoke("grid:open-chrome-login");
   },
   getInstallerLang() {
     return ipcRenderer.invoke("grid:get-installer-lang");

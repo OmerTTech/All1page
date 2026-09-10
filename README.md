@@ -47,8 +47,8 @@
 ### Features
 
 - **Grid layouts:** 1×4 (default), 2×2, or custom (e.g. 1×8, 2×3, 8×4) — panels resize automatically
-- **Stack mode:** In a custom grid, rows are never compressed; each row keeps screen height and the app scrolls down to reach the rest
-- **Multi-account:** Each panel keeps its own persistent session — run multiple Google accounts at the same time
+- **Stack mode:** In 2×2 and custom grids, rows are never compressed; each row keeps screen height and the app scrolls down to reach the rest
+- **Multi-account:** Each panel keeps its own persistent session — run multiple Google accounts at the same time. Optionally sign in once in Chrome: the toolbar account button opens the account list, and the app picks up the open accounts automatically
 - **URL bar:** Open any site/URL per panel, not just Gemini
 - **Settings:** Interface language (English / Türkçe / Azərbaycanca), dark & light theme, grid gap, start fullscreen, remember session
 - **Zoom:** `Ctrl + =` / `Ctrl + -` / `Ctrl + 0` — all panels zoom together
@@ -95,6 +95,7 @@ setx GH_TOKEN "github_pat_..."
 
 ### Version History
 
+- **v1.4.0** — Stack mode now also works in the 2×2 layout (was custom-only); layout buttons reordered to 1×4, 2×2, Custom with 1×4 as the default; removed the "test v1" / "CHROME" badges; prompt-template toolbar button is disabled with a localized "coming soon" tooltip; Chrome account login polished (account-chooser flow; after closing Chrome cookies are refreshed silently, no more mass panel reload that triggered Google reCAPTCHA); fixed the duplicated `isEnabled` so the persistent `chrome-mode` setting is actually honored; removed leftover login experiment scripts
 - **v1.3.1** — Reflow fix: panel order is preserved in row-major order when switching layouts (an empty cell left behind by a closed panel is filled by the same row's next panel, not the row below); layout buttons no longer auto-fill empty cells with the default site (start them with ▶ to keep performance); `reflowCells` is now immutable
 - **v1.3.0** — Cell-based grid (panels stay put when the grid changes); Swap mode (two-click panel exchange); default URL setting; "Reload All" fills empty cells with the default site; layout buttons fill empty cells; stack-mode toolbar clipping fix; storage keys renamed to `all1page-*`; compact icon-only toolbar
 - **v1.2.0** — Azerbaijani installer language; the app follows the installer language; Settings panel opens above the panels; real OS-level maximize on startup; fullscreen exit-loop fix; pre-built icon (no converter needed)
@@ -135,8 +136,8 @@ Otomatik güncelleme açılırken kontrol eder; yeni sürüm varsa sağ altta "Y
 | Özellik | Açıklama |
 |---|---|
 | **Panel Izgarası** | 1×4 (varsayılan), 2×2 veya Custom (ör. 1×8, 2×3, 8×4) — panel sayısı ızgaraya göre otomatik değişir |
-| **Yığın Modu** | Custom ızgarada satırlar sıkıştırılmaz; her satır ekran yüksekliğinde kalır, alt panellere uygulama kaydırılarak ulaşılır |
-| **Çoklu Hesap** | Her panel kendi kalıcı oturumuyla çalışır — 4 farklı Google hesabı, 4 ayrı sohbet |
+| **Yığın Modu** | 2×2 ve Custom ızgarada satırlar sıkıştırılmaz; her satır ekran yüksekliğinde kalır, alt panellere uygulama kaydırılarak ulaşılır |
+| **Çoklu Hesap** | Her panel kendi kalıcı oturumuyla çalışır — 4 farklı Google hesabı, 4 ayrı sohbet. Sağ üstteki hesap düğmesiyle Chrome'daki hesap listesi açılır, açık hesaplar uygulamaya devralınır |
 | **URL Çubuğu** | Her panelde URL girilebilir; sadece Gemini değil her site açılır |
 | **Ayarlar** | Arayüz dili (Türkçe/English/Azərbaycanca), açık & koyu tema, ızgara boşluğu, tam ekran başlangıcı, oturumu hatırlama |
 | **Yakınlaştırma** | `Ctrl + =` / `Ctrl + -` / `Ctrl + 0` — tüm paneller birlikte zoomlanır |
@@ -224,11 +225,12 @@ tarayıcı görünümü** (Electron `WebContentsView` + `persist:` session parti
 
 - **Electron:** v44, `WebContentsView` tabanlı çoklu panel sistemi
 - **Frontend:** React 18 + Vite + Tailwind CSS v4
-- **Oturum:** `persist:gemini-0..n` partition — her panel bağımsız çerez deposu
+- **Oturum:** Chrome profili modunda paneller aynı oturumu paylaşır (Chrome'daki açık hesaplar CDP köprüsüyle devralınır); mod kapalıysa `persist:gemini-0..n` partition — her panel bağımsız çerez deposu
 - **Güncelleme:** `electron-updater` + GitHub Releases (`latest.yml`)
 
 ### Sürüm Geçmişi
 
+- **v1.4.0** — Yığın modu artık 2×2 düzende de çalışıyor (önceden sadece Custom); layout düğmeleri 1×4, 2×2, Custom sırasına getirildi ve varsayılan 1×4 oldu; "test v1" / "CHROME" rozetleri kaldırıldı; şablon düğmesi disabled yapıldı ve fareyi üzerine getirince "Otomatik Prompt şablonları - yakın gelecekte.." (dile göre) ipucu gösteriyor; Chrome hesap girişi parlatıldı (hesap seçici akışı; Chrome kapanınca çerezler sessizce yenileniyor, artık tüm panelleri aynı anda yenileyerek Google reCAPTCHA tetikleyen davranış yok); `isEnabled` kopyası düzeltilerek kalıcı `chrome-mode` ayarının gerçekten çalışması sağlandı; giriş denemelerinden kalan ölü scriptler temizlendi
 - **v1.3.1** — Reflow onarımı: layout değişince panel sırası korunur (kapatılan hücrenin boşluğu alttaki değil aynı satırdaki sonraki panelle dolar); layout düğmeleri boş hücreleri varsayılan siteyle otomatik doldurmaz (performans için ▶ ile başlatılır); `reflowCells` artık immutable
 - **v1.3.0** — Hücre tabanlı ızgara (ızgara değişince paneller yerinde kalır); Yer Değiştir modu (iki tıklamayla panel takası); varsayılan URL ayarı; "Hepsini Yenile" boş hücreleri varsayılan siteyle doldurur; layout düğmeleri boş hücreleri doldurur; yığın modunda araç çubuğu kırpma düzeltmesi; depolama anahtarları `all1page-*`; kompakt ikon araç çubuğu
 - **v1.2.0** — Azərbaycanca kurulumcu dili; uygulama kurulum dilinde açılır; Ayarlar panellerin üstünde; açılışta gerçek OS düzeyinde ekranı kapla; tam ekran çıkışı tekrar döngüsü düzeltmesi; hazır ikon (dönüştürücü gerekmez)
@@ -258,8 +260,8 @@ tarayıcı görünümü** (Electron `WebContentsView` + `persist:` session parti
 ### Xüsusiyyətlər
 
 - **Şəbəkə növləri:** 1×4 (susmaya görə), 2×2 və ya xüsusi (məs. 1×8, 2×3, 8×4)
-- **Yığın rejimi:** Xüsusi şəbəkədə sətirlər sıxılmır; hər sətir ekran hündürlüyündə qalır, qalan panellər üçün tətbiq aşağı sürüşdürülür
-- **Çoxlu hesab:** Hər panel öz qalıcı sessiyasını saxlayır — eyni anda bir neçə Google hesabı istifadə edin
+- **Yığın rejimi:** 2×2 və xüsusi şəbəkədə sətirlər sıxılmır; hər sətir ekran hündürlüyündə qalır, qalan panellər üçün tətbiq aşağı sürüşdürülür
+- **Çoxlu hesab:** Hər panel öz qalıcı sessiyasını saxlayır — eyni anda bir neçə Google hesabı istifadə edin. Sağ yuxarıdakı hesab düyməsi ilə Chrome-dakı hesab siyahısı açılır, açıq hesaplar tətbiqə avtomatik götürülür
 - **URL çubuğu:** Hər paneldə istənilən saytı/URL-i açın, təkcə Gemini yox
 - **Ayarlar:** İnterfeys dili (English / Türkçe / Azərbaycanca), qaranlıq & işıqlı mövzu, şəbəkə boşluğu, tam ekran başlanğıcı, sessiyanı xatırlama
 - **Yaxınlaşma:** `Ctrl + =` / `Ctrl + -` / `Ctrl + 0`
@@ -298,6 +300,7 @@ setx GH_TOKEN "github_pat_..."
 
 ### Versiya tarixçəsi
 
+- **v1.4.0** — Yığın rejimi artıq 2×2 düzənində də işləyir (əvvəlcə yalnız Xüsusi); layout düymələri 1×4, 2×2, Xüsusi sırasına gətirildi və susmaya görə 1×4 oldu; "test v1" / "CHROME" rozetləri çıxarıldı; şablon düyməsi deaktiv edildi və üzərinə gələndə "Avtomatik Prompt şablonları - yaxın gələcəkdə.." (dilə görə) ipucu göstərir; Chrome hesab girişi təkmilləşdirildi (hesab seçici axını; Chrome bağlananda çerezlər sakitcə yenilənir, artıq bütün panelləri eyni anda yeniləyib Google reCAPTCHA tetikleyən davranış yoxdur); `isEnabled` dublikatı düzəldilərək davamlı `chrome-mode` parametrinin həqiqətən işləməsi təmin edildi; giriş sınaqlarından qalan ölü skriptlər təmizləndi
 - **v1.3.1** — Reflow təmiratı: layout dəyişəndə panel sırası qorunur (bağlanan xananın boşluğu aşağıdakı deyil, eyni sətirdəki sonrakı panellə dolar); layout düymələri boş xanaları defolt saytla avtomatik doldurmur (performans üçün ▶ ilə başladılır); `reflowCells` artıq immutable
 - **v1.3.0** — Hücrə əsaslı qrid (qrid dəyişəndə panellər yerində qalır); Yer Dəyişdir rejimi (iki kliklə panel mübadiləsi); defolt URL parametri; "Hamısını Yenilə" boş xanaları defolt saytla doldurur; layout düymələri boş xanaları doldurur; yığın rejimində alətlər paneli kırpma düzəlişi; depolama açarları `all1page-*`; yığcam ikon alətlər paneli
 - **v1.2.0** — Azərbaycanca quraşdırıcı dili; tətbiq quraşdırıcı dilində açılır; Ayarlar panellərin üstündə; açılışda real OS səviyyəli tam ekran; tam ekrandan çıxanda təkrarlanma döngüsü düzəlişi; hazır ikon (çevirici tələb olunmur)

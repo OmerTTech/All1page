@@ -2,7 +2,7 @@ export const DEFAULT_URL = "https://gemini.google.com/app";
 export const MAX_CELLS = 8 * 12;
 
 export const STORAGE_URLS = "all1page-urls-v1";
-export const STORAGE_LAYOUT = "all1page-layout-v2";
+export const STORAGE_LAYOUT = "all1page-layout-v3";
 export const STORAGE_DIMS = "all1page-dims-v1";
 export const STORAGE_AUTOHIDE = "all1page-autohide-v1";
 export const STORAGE_LANG = "all1page-lang-v1";
@@ -14,6 +14,7 @@ export const STORAGE_THEME = "all1page-theme-v1";
 export const STORAGE_PANELS = "all1page-panels-v1";
 export const STORAGE_STACK = "all1page-stack-v1";
 export const STORAGE_DEFAULT_URL = "all1page-default-url-v1";
+export const STORAGE_SNIPPET = "all1page-snippet-v1";
 
 export const REVEAL_ZONE = 6;
 export const HIDE_THRESHOLD = 90;

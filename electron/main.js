@@ -1,9 +1,35 @@
 "use strict";
 
-const { app, BrowserWindow, WebContentsView, ipcMain, shell, session, screen } = require("electron");
+const { app, BrowserWindow, WebContentsView, ipcMain, shell, session, screen, webContents } = require("electron");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const updater = require("./updater");
+const chromeProfile = require("./chrome-import");
+const chromeSession = require("./chrome-session");
+
+// Chrome profili oturum köprüsü (CDP):
+// Electron, kopya profilin çerez DB'sine DOKUNMAZ. Açılışta kopya profili
+// gerçek Chrome'da (headless) açar, Network.getAllCookies ile çözülmüş
+// çerezleri alır ve session.cookies.set ile kendi oturumuna yazar. Böylece
+// Chrome 136+ App-Bound engeli de, v10/Local State şifre çözme sorunu da
+// tamamen atlanır; Electron kendi userData'sında kendi anahtarıyla saklar.
+if (chromeProfile.isEnabled()) {
+  const res = chromeProfile.ensureCopyForImport();
+  console.log(
+    res.ok
+      ? "[chrome-profile] kopya hazir: " + chromeProfile.destDir()
+      : "[chrome-profile] kopya hazirlanamadi: " + res.reason
+  );
+}
+
+// Google, accounts.google.com'a "otomasyon/embedded" sinyallerini taşıyan
+// tarayıcılardan girişi engeller ("This browser or app may not be secure").
+// AutomationControlled'ı kapatmak navigator.webdriver=false yapar ve
+// tarayıcının "test/embedded" olarak etiketlenmesini önler. Temiz bir Chromium
+// olduğu için güvenlik açısından gerçek tarayıcı davranışından sapma yaratmaz.
+if (process.platform !== "android") {
+  app.commandLine.appendSwitch("disable-blink-features", "AutomationControlled");
+}
 
 const DEFAULT_URL = "https://gemini.google.com/app";
 const MAX_VIEWS = 96; // satır(8) × sütun(12) üst sınırı
@@ -137,7 +163,14 @@ function wireZoom(wc) {
 }
 
 function partitionFor(i) {
+  // Chrome profili modunda tüm paneller aynı oturumu (Chrome'un kopyası) paylaşır
+  if (chromeProfile.isEnabled()) return undefined;
   return "persist:gemini-" + i;
+}
+
+function sessionFor(i) {
+  const p = partitionFor(i);
+  return p ? session.fromPartition(p) : session.defaultSession;
 }
 
 function sanitizeUrl(raw) {
@@ -157,16 +190,39 @@ function wireView(view, id) {
   const wc = view.webContents;
   wireZoom(wc);
 
-  // Google giriş/hesap akışlarını aynı panelde tut; gerisini sistem tarayıcısında aç
-  wc.setWindowOpenHandler(({ url }) => {
+  // Google QR/doğrulama popup'ları gerçek bir pencerede açılsın; giriş akışları
+  // aynı panelde kalır. Popup oturum kapsamını (session) devralır, böylece
+  // çerezler panele aynı şekilde yazılır.
+  wc.setWindowOpenHandler(({ url, disposition }) => {
     try {
+      console.log("[popup] dest=" + disposition + " url=" + url);
       const u = new URL(url);
-      if (u.hostname === "accounts.google.com" || u.hostname === "gemini.google.com") {
-        wc.loadURL(url);
+      const isGoogle =
+        u.hostname === "accounts.google.com" ||
+        u.hostname === "gemini.google.com" ||
+        u.hostname.endsWith(".google.com");
+
+      // Yeni sekme + Google (hesap değiştirme durumu): URL'yi AYNI panelde yükler.
+      // authuser parametresi HANGİ hesabın açılacağını belirler (0=ilk, 1=ikinci)
+      // — ona dokunmayız. Yalnızca boş "pageId" parametresi kaldırılır (kara
+      // ekran/ERR_INVALID_RESPONSE'un nedeni). Path (/u/N/) olduğu gibi bırakılır.
+      if (isGoogle && (disposition === "foreground-tab" || disposition === "background-tab")) {
+        let target = url;
+        if (u.hostname === "gemini.google.com") {
+          u.searchParams.delete("pageId");
+          target = u.toString().replace(/&?pageId=$/, "");
+        }
+        console.log("[popup] yuklenen:", target);
+        wc.loadURL(target);
         return { action: "deny" };
       }
-    } catch {
-      /* geçersiz URL */
+
+      // Gerçek popup (QR / doğrulama akışı): küçük ayrı pencere
+      if (isGoogle) {
+        return { action: "allow", overrideBrowserWindowOptions: { autoHideMenuBar: true } };
+      }
+    } catch (e) {
+      console.error("[popup] hatali url:", url, e.message);
     }
     shell.openExternal(url);
     return { action: "deny" };
@@ -209,7 +265,7 @@ function createView(id) {
   wireView(view, id);
 
   // Mikrofon (sesli giriş), pano ve bildirim izinleri
-  session.fromPartition(partitionFor(id)).setPermissionRequestHandler((_wc, permission, callback) => {
+  sessionFor(id).setPermissionRequestHandler((_wc, permission, callback) => {
     callback(
       ["media", "clipboard-read", "clipboard-sanitized-write", "notifications", "fullscreen"].includes(permission)
     );
@@ -310,6 +366,30 @@ ipcMain.on("grid:set-autohide", (_event, on) => {
 
 ipcMain.handle("grid:get-version", () => app.getVersion());
 
+ipcMain.handle("grid:get-chrome-mode", () => chromeProfile.isEnabled());
+
+// Chrome modunda hesap ekleme: kopya profili gerçek Chrome'da (App-Bound kapalı)
+// açarak hesap girişi/eklemesi yapılır. Tarayıcı kapatılınca çerezler kopyada
+// kalır ve uygulama CDP köprüsü ile onları yeniden okur; paneller YENİLENMEZ —
+// aynı anda toplu reload Google'ı bot sanıp recaptcha gösteriyor. Kullanıcı
+// paneli kendisi yeniler ya da uygulamayı yeniden başlatınca yeni hesap görünür.
+ipcMain.handle("grid:open-chrome-login", () => {
+  const chromeLogin = require("./chrome-login");
+  const res = chromeLogin.openLoginChrome(null, { keepChild: true });
+  if (!res.ok) return { ok: false, reason: res.reason || null };
+
+  (res.child || {}).on("exit", async () => {
+    try {
+      const cookies = await chromeSession.readCookiesFromCopy(chromeProfile.destDir());
+      await chromeSession.injectCookies(session.defaultSession, cookies);
+    } catch (e) {
+      console.warn("[chrome-session] çerez yenileme başarısız:", e.message);
+    }
+  });
+
+  return { ok: true };
+});
+
 ipcMain.handle("grid:get-installer-lang", () => installerLang());
 
 // Ayarlar penceresi renderer içinde açılınca panellerin onu kapatmaması için
@@ -399,6 +479,62 @@ ipcMain.on("grid:reload", (_event, id) => {
   if (v) v.view.webContents.reload();
 });
 
+// Sabit şablonu açık olan Gemini panelinin prompt kutusuna yazar.
+// Odaklı webContents bir Gemini paneliyse onu hedefler, değilse ilk Gemini panelini.
+ipcMain.handle("grid:inject-prompt", (_event, text) => {
+  const snippet = String(text || "").trim();
+  if (!snippet) return { ok: false, reason: "empty" };
+
+  const geminiEntries = Object.entries(views).filter(([, v]) => {
+    try {
+      return new URL(v.view.webContents.getURL()).hostname === "gemini.google.com";
+    } catch {
+      return false;
+    }
+  });
+  if (geminiEntries.length === 0) return { ok: false, reason: "no-gemini" };
+
+  const focused = webContents.getFocusedWebContents();
+  let target = geminiEntries.find(([, v]) => v.view.webContents.id === focused.id);
+  if (!target) target = geminiEntries[0];
+
+  const script =
+    "(() => {" +
+    "const text = " + JSON.stringify(snippet) + ";" +
+    "const isVisible = (el) => {" +
+    "  const r = el.getBoundingClientRect();" +
+    "  return r && r.width > 0 && r.height > 0;" +
+    "};" +
+    "const roots = [" +
+    "  ...document.querySelectorAll('rich-textarea textarea')," +
+    "  ...document.querySelectorAll('div.ql-editor[contenteditable=\"true\"]')," +
+    "  ...document.querySelectorAll('[contenteditable=\"true\"]')," +
+    "  ...document.querySelectorAll('textarea')" +
+    "];" +
+    "const el = roots.find(isVisible);" +
+    "if (!el) return 'NOT_FOUND';" +
+    "el.focus();" +
+    "if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {" +
+    "  const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;" +
+    "  setter.call(el, text);" +
+    "  el.dispatchEvent(new Event('input', { bubbles: true }));" +
+    "} else {" +
+    "  const range = document.createRange();" +
+    "  range.selectNodeContents(el);" +
+    "  const sel = window.getSelection();" +
+    "  sel.removeAllRanges();" +
+    "  sel.addRange(range);" +
+    "  document.execCommand('insertText', false, text);" +
+    "}" +
+    "return 'OK';" +
+    "})()";
+
+  return target[1].view.webContents
+    .executeJavaScript(script, true)
+    .then((result) => ({ ok: result === "OK", reason: String(result || "error") }))
+    .catch((e) => ({ ok: false, reason: String(e && e.message || "error") }));
+});
+
 ipcMain.on("grid:back", (_event, id) => {
   const v = views[id];
   if (v && v.view.webContents.navigationHistory.canGoBack()) v.view.webContents.navigationHistory.goBack();
@@ -427,7 +563,21 @@ ipcMain.on("grid:sleep", (_event, id) => {
 
 /* ------------------------- Yaşam döngüsü ------------------------- */
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Chrome oturum köprüsü: kopyadan çözülmüş çerezleri bu session'a aktar.
+  // Pencere/paneller bu adımdan SONRA açılır ki Google hesapları girişli gelsin.
+  if (chromeProfile.isEnabled()) {
+    try {
+      const cookies = await chromeSession.readCookiesFromCopy(chromeProfile.destDir());
+      const g = cookies.filter((c) => String(c.domain || "").includes("google"));
+      console.log(`[chrome-session] kopyadan ${cookies.length} çerez okundu (${g.length} google)`);
+      await chromeSession.injectCookies(session.defaultSession, cookies);
+    } catch (e) {
+      console.warn("[chrome-session] CDP köprüsü başarısız:", e.message);
+      console.warn("[chrome-session] Çare: önce 'npm run login:chrome' ile kopya profilde giriş yap.");
+    }
+  }
+
   createWindow();
   updater.initUpdater(() => win);
   updater.checkForUpdatesSoon(() => win);

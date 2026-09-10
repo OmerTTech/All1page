@@ -82,6 +82,8 @@ export default function Settings({
   setTheme,
   defaultUrl,
   setDefaultUrl,
+  promptSnippet,
+  setPromptSnippet,
 }) {
   const [draftLang, setDraftLang] = useState(lang);
   const [draftGap, setDraftGap] = useState(gap);
@@ -89,6 +91,7 @@ export default function Settings({
   const [draftRm, setDraftRm] = useState(rememberSession);
   const [draftTheme, setDraftTheme] = useState(theme);
   const [draftDefaultUrl, setDraftDefaultUrl] = useState(defaultUrl);
+  const [draftSnippet, setDraftSnippet] = useState(promptSnippet);
 
   if (!open) return null;
 
@@ -99,6 +102,7 @@ export default function Settings({
     setRememberSession(draftRm);
     setTheme(draftTheme);
     setDefaultUrl(normalizeUrl(draftDefaultUrl));
+    setPromptSnippet(draftSnippet);
     onClose();
   };
 
@@ -143,6 +147,22 @@ export default function Settings({
               />
               <p className="mt-2 text-[11px] text-[var(--c-text-mute)]">
                 {t(draftLang, "defaultUrlHint")}
+              </p>
+            </div>
+            <Divider />
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-[var(--c-text-dim)] mb-2">
+                {t(draftLang, "promptSnippet")}
+              </label>
+              <textarea
+                value={draftSnippet}
+                onChange={(e) => setDraftSnippet(e.target.value)}
+                rows={3}
+                spellCheck={false}
+                className="w-full resize-none bg-[var(--c-elev)] border border-[var(--c-border)] rounded-lg px-3 py-2 text-xs text-[var(--c-text)] outline-none focus:border-[#4a7dfc]"
+              />
+              <p className="mt-2 text-[11px] text-[var(--c-text-mute)]">
+                {t(draftLang, "promptSnippetHint")}
               </p>
             </div>
             <Divider />
