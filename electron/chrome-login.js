@@ -11,25 +11,8 @@ const { spawn } = require("child_process");
 const APPDATA = process.env.APPDATA || "";
 const DEST = path.join(APPDATA, "All1page", "chrome-profile");
 
-const SKIP_DIRS = new Set([
-  "Cache", "Code Cache", "CachedData", "GPUCache",
-  "DawnGraphiteCache", "DawnWebGPUCache", "ShaderCache", "GrShaderCache",
-  "Media Cache", "Media Capabilities", "Storage", "CacheStorage",
-  "component_crx_cache", "OptimizationHints", "download_cache",
-]);
-
 function destDir() {
   return DEST;
-}
-
-function chromeUserDataDir() {
-  if (process.platform === "win32") {
-    return path.join(process.env.LOCALAPPDATA, "Google", "Chrome", "User Data");
-  }
-  if (process.platform === "darwin") {
-    return path.join(process.env.HOME, "Library", "Application Support", "Google", "Chrome");
-  }
-  return path.join(process.env.HOME, ".config", "google-chrome");
 }
 
 function chromeExe() {
@@ -46,20 +29,6 @@ function chromeExe() {
   return "/usr/bin/google-chrome";
 }
 
-function recursiveCopy(src, dest, skip) {
-  if (!fs.existsSync(src)) return;
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    if (skip.has(entry.name)) continue;
-    const from = path.join(src, entry.name);
-    const to = path.join(dest, entry.name);
-    if (entry.isDirectory()) recursiveCopy(from, to, skip);
-    else if (entry.isFile()) {
-      try { fs.copyFileSync(from, to); } catch { /* kilitli dosya */ }
-    }
-  }
-}
-
 function ensureSessionKey(target) {
   const src = path.join(target, "Local State");
   const dest = path.join(target, "Default", "Local State");
@@ -68,21 +37,18 @@ function ensureSessionKey(target) {
   try { fs.copyFileSync(src, dest); } catch { /* kilitli */ }
 }
 
+// UYGULAMANIN KENDİ PROFİLİ — boş (hesapsız) oluşturulur.
+// DİKKAT: gerçek Chrome profili (%LOCALAPPDATA%\Google\Chrome) BURAYA
+// KOPYALANMAZ. Önceden sessizce kopyalanıyordu; bu yüzden "Hesap ekle"de
+// kullanıcının kendi Google hesapları çıkıyordu. Artık Chrome, verilen boş
+// klasörde kendi profilini (Default + Local State) kendisi oluşturur.
+// Hesaplar yalnızca burada, "Hesap ekle" ile eklenir ve klasör silinmediği
+// için her açılışta kalıcıdır.
 function ensureCopy() {
-  const base = chromeUserDataDir();
   const target = destDir();
-  const hadExisting =
-    fs.existsSync(path.join(target, "Local State")) ||
-    fs.existsSync(path.join(target, "Network")) ||
-    fs.existsSync(path.join(target, "Default", "Network"));
-  if (!hadExisting) {
-    if (!fs.existsSync(base)) throw new Error("Chrome profili bulunamadı: " + base);
-    console.log("[chrome-login] Kopya oluşturuluyor (", base, "→", target, ")");
-    fs.mkdirSync(target, { recursive: true });
-    try { fs.copyFileSync(path.join(base, "Local State"), path.join(target, "Local State")); } catch { /* yok */ }
-    const def = path.join(base, "Default");
-    if (fs.existsSync(def)) recursiveCopy(def, path.join(target, "Default"), SKIP_DIRS);
-  }
+  try {
+    fs.mkdirSync(path.join(target, "Default"), { recursive: true });
+  } catch { /* yoksay */ }
   ensureSessionKey(target);
   return target;
 }

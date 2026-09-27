@@ -40,41 +40,6 @@ function setEnabled(on) {
   }
 }
 
-// Ağırlık yapan / gereksiz önbellek dizinleri kopyalanmaz
-const SKIP_DIRS = new Set([
-  "Cache",
-  "Code Cache",
-  "CachedData",
-  "GPUCache",
-  "DawnGraphiteCache",
-  "DawnWebGPUCache",
-  "ShaderCache",
-  "GrShaderCache",
-  "Media Cache",
-  "Media Capabilities",
-  "Storage",
-  "CacheStorage",
-  "component_crx_cache",
-  "OptimizationHints",
-  "download_cache",
-]);
-
-function chromeUserDataDir() {
-  if (process.platform === "win32") {
-    return path.join(process.env.LOCALAPPDATA, "Google", "Chrome", "User Data");
-  }
-  if (process.platform === "darwin") {
-    return path.join(
-      process.env.HOME,
-      "Library",
-      "Application Support",
-      "Google",
-      "Chrome"
-    );
-  }
-  return path.join(process.env.HOME, ".config", "google-chrome");
-}
-
 // Kopyanın kökü: Chrome'un "User Data" yerleşimi birebir korunur.
 // dev/paket farkı olmadan sabit: kökte "Local State" + "Default" klasörü.
 function destDir() {
@@ -88,67 +53,9 @@ function sessionDir() {
   return path.join(destDir(), "Default");
 }
 
-function recursiveCopy(src, dest, skip = new Set()) {
-  if (!fs.existsSync(src)) return;
-  fs.mkdirSync(dest, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    if (skip.has(entry.name)) continue;
-    const from = path.join(src, entry.name);
-    const to = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      recursiveCopy(from, to, skip);
-    } else if (entry.isFile()) {
-      try {
-        fs.copyFileSync(from, to);
-      } catch {
-        // Chrome açıkken kilitli bir dosya da olabilir; sessizce atla.
-      }
-    }
-  }
-}
-
-// Chrome "Default" profilini hedef dizine aktarır. Varsa en güncelini
-// korur, sadece yoksa oluşturur.
-function importProfile() {
-  const base = chromeUserDataDir();
-  if (!base || !fs.existsSync(base)) return { ok: false, reason: "chrome-missing" };
-
-  const target = destDir();
-  const hadExisting =
-    fs.existsSync(path.join(target, "Local State")) ||
-    fs.existsSync(path.join(target, "Network")) ||
-    fs.existsSync(path.join(target, "Default", "Network"));
-
-  if (!hadExisting) {
-    fs.mkdirSync(target, { recursive: true });
-
-    // Şifreleme anahtarlarını taşıyan Local State, User Data kökünde durur
-    try {
-      fs.copyFileSync(path.join(base, "Local State"), path.join(target, "Local State"));
-    } catch {
-      // bazı sürümlerde kökte olmayabilir
-    }
-
-    // Chrome'un "Default" profilinin içeriği "Default" klasörüne gider
-    const def = path.join(base, "Default");
-    if (fs.existsSync(def)) {
-      recursiveCopy(def, path.join(target, "Default"), SKIP_DIRS);
-    }
-  }
-
-  // Electron userData'sı "Default" klasörüne işaret edilir; Chromium oradan
-  // "Local State" arar. Chrome'un anahtarı olmadan v10 çerezler çözülemez.
-  ensureSessionKey(target);
-
-  const ok =
-    fs.existsSync(path.join(target, "Local State")) ||
-    fs.existsSync(path.join(target, "Default", "Network", "Cookies"));
-  return ok ? { ok: true, updated: !hadExisting } : { ok: false, reason: "incomplete" };
-}
-
 // Electron, userData kökünde (yani kopyanın "Default" klasöründe) "Local State"
-// arar; Chrome'un anahtarı kökteki "Local State"te olduğundan oraya taşınması
-// gerekir ki şifre çözme (v10) eşleşsin.
+// arar; anahtar kökteki "Local State"te olduğundan oraya taşınması gerekir ki
+// şifre çözme (v10) eşleşsin.
 function ensureSessionKey(target) {
   const src = path.join(target, "Local State");
   const dest = path.join(target, "Default", "Local State");
@@ -162,35 +69,25 @@ function ensureSessionKey(target) {
   }
 }
 
-// CDP köprüsü öncesi: kopya profilin hazır olduğundan emin olur.
-// Kopya zaten varsa korunur (kullanıcı orada giriş yapmıştır); yoksa gerçek
-// Chrome profilinden oluşturulur.
+// UYGULAMANIN KENDİ PROFİLİ — boş (hesapsız) oluşturulur.
+// DİKKAT: gerçek Chrome profili (%LOCALAPPDATA%\Google\Chrome) BURAYA
+// KOPYALANMAZ. Önceden sessizce kopyalanıyordu; bu yüzden kullanıcının kendi
+// Google hesapları "Hesap ekle"de kendi hesaplarıymış gibi görünüyordu.
+// Hesaplar artık yalnızca "Hesap ekle" ile bu profile eklenir; profil klasörü
+// hiçbir zaman silinmediği için eklenen hesaplar her açılışta kalıcıdır.
+// (Klasörü silmek hesapları silmek demektir.)
 function ensureCopyForImport() {
-  const base = chromeUserDataDir();
   const target = destDir();
-  const hadExisting =
-    fs.existsSync(path.join(target, "Local State")) ||
-    fs.existsSync(path.join(target, "Network")) ||
-    fs.existsSync(path.join(target, "Default", "Network"));
-
-  if (!hadExisting) {
-    if (!fs.existsSync(base)) return { ok: false, reason: "chrome-missing" };
-    fs.mkdirSync(target, { recursive: true });
-    try {
-      fs.copyFileSync(path.join(base, "Local State"), path.join(target, "Local State"));
-    } catch {
-      // yok
-    }
-    const def = path.join(base, "Default");
-    if (fs.existsSync(def)) recursiveCopy(def, path.join(target, "Default"), SKIP_DIRS);
+  const hadCookies = fs.existsSync(path.join(target, "Default", "Network", "Cookies"));
+  try {
+    fs.mkdirSync(path.join(target, "Default"), { recursive: true });
+  } catch {
+    /* yok say */
   }
-
+  // Chrome ilk açılışta kök "Local State"i kendisi yazar; anahtar "Default"
+  // içinde de bulunmalı ki CDP köprüsü v10 çerezleri çözebilsin.
   ensureSessionKey(target);
-
-  const ok =
-    fs.existsSync(path.join(target, "Local State")) ||
-    fs.existsSync(path.join(target, "Default", "Network", "Cookies"));
-  return ok ? { ok: true, updated: !hadExisting } : { ok: false, reason: "incomplete" };
+  return { ok: true, updated: !hadCookies };
 }
 
-module.exports = { importProfile, isEnabled, setEnabled, destDir, sessionDir, chromeUserDataDir, ensureCopyForImport };
+module.exports = { isEnabled, setEnabled, destDir, sessionDir, ensureCopyForImport };
