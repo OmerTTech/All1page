@@ -69,7 +69,7 @@ function installerLang() {
 
 // Google servisleri "Electron/…" kullanıcı ajanına kısıtlanmış içerik dönebiliyor;
 // gerçek Chromium sürümünü taşıyan temiz bir Chrome UA kullan.
-{
+function realChromeUA() {
   const match = /Chrome\/([\d.]+)/.exec(app.userAgentFallback);
   const chromeVer = match ? match[1] : "142.0.0.0";
   const platform =
@@ -78,8 +78,33 @@ function installerLang() {
       : process.platform === "linux"
         ? "X11; Linux x86_64"
         : "Windows NT 10.0; Win64; x64";
-  app.userAgentFallback =
-    "Mozilla/5.0 (" + platform + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + chromeVer + " Safari/537.36";
+  return (
+    "Mozilla/5.0 (" + platform + ") AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + chromeVer + " Safari/537.36"
+  );
+}
+{
+  app.userAgentFallback = realChromeUA();
+  // ÖNEMLİ: userAgentFallback yalnızca UA'sız giden istekleri (net.fetch gibi)
+  // etkiler. Sayfaların gördüğü UA session'a aittir; sadece fallback değiştirilirse
+  // Google hâlâ "Electron/44.x" görür ve OAuth girişini "cookie settings" hatasıyla
+  // reddeder. Bu yüzden her oturuma gerçek UA'yı yazıyoruz.
+  // DİKKAT: session.defaultSession app hazır OLMADAN okunamaz ("Session can only be
+  // received when app is ready") — o yüzden uygulama whenReady içinde çağrılır.
+  const applyUA = (s) => {
+    try {
+      if (s && !s.__all1pageUA) {
+        s.setUserAgent(realChromeUA());
+        s.__all1pageUA = true;
+      }
+    } catch {
+      /* yoksay */
+    }
+  };
+  app.whenReady().then(() => {
+    applyUA(session.defaultSession);
+    applyUA(session.fromPartition("persist:gemini-0"));
+  });
+  app.on("session-created", (_e, s) => applyUA(s));
 }
 
 /** @type {BrowserWindow | null} */
@@ -190,43 +215,57 @@ function wireView(view, id) {
   const wc = view.webContents;
   wireZoom(wc);
 
-  // Google QR/doğrulama popup'ları gerçek bir pencerede açılsın; giriş akışları
-  // aynı panelde kalır. Popup oturum kapsamını (session) devralır, böylece
-  // çerezler panele aynı şekilde yazılır.
+  // Panelden açılan yeni pencereler UYGULAMA İÇİNDE açılır; aynı oturumu
+  // (session) paylaştıkları için kopya profilden gelen çerezleri de görürler.
+  // ÖNEMLİ: http(s) dışındaki her şey sistem uygulamasına gider (mailto:, tel:).
+  // Daha önce Google dışı her adres shell.openExternal ile KULLANICININ GERÇEK
+  // Chrome'una kaçıyordu; ChatGPT'da "Google ile giriş yap" → auth.openai.com
+  // → kullanıcının kendi Chrome profili açılıyor ve Google profil seçiciyi
+  // gösteriyordu. Artık giriş akışı uygulama içinde kalıyor.
   wc.setWindowOpenHandler(({ url, disposition }) => {
+    let u;
     try {
       console.log("[popup] dest=" + disposition + " url=" + url);
-      const u = new URL(url);
-      const isGoogle =
-        u.hostname === "accounts.google.com" ||
-        u.hostname === "gemini.google.com" ||
-        u.hostname.endsWith(".google.com");
-
-      // Yeni sekme + Google (hesap değiştirme durumu): URL'yi AYNI panelde yükler.
-      // authuser parametresi HANGİ hesabın açılacağını belirler (0=ilk, 1=ikinci)
-      // — ona dokunmayız. Yalnızca boş "pageId" parametresi kaldırılır (kara
-      // ekran/ERR_INVALID_RESPONSE'un nedeni). Path (/u/N/) olduğu gibi bırakılır.
-      if (isGoogle && (disposition === "foreground-tab" || disposition === "background-tab")) {
-        let target = url;
-        if (u.hostname === "gemini.google.com") {
-          u.searchParams.delete("pageId");
-          target = u.toString().replace(/&?pageId=$/, "");
-        }
-        console.log("[popup] yuklenen:", target);
-        wc.loadURL(target);
-        return { action: "deny" };
-      }
-
-      // Gerçek popup (QR / doğrulama akışı): küçük ayrı pencere
-      if (isGoogle) {
-        return { action: "allow", overrideBrowserWindowOptions: { autoHideMenuBar: true } };
-      }
+      u = new URL(url);
     } catch (e) {
       console.error("[popup] hatali url:", url, e.message);
+      return { action: "deny" };
     }
-    shell.openExternal(url);
-    return { action: "deny" };
+
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      shell.openExternal(url);
+      return { action: "deny" };
+    }
+
+    const isGoogle =
+      u.hostname === "accounts.google.com" ||
+      u.hostname === "gemini.google.com" ||
+      u.hostname.endsWith(".google.com");
+
+    // Yeni sekme + Google (hesap değiştirme durumu): URL'yi AYNI panelde yükler.
+    // authuser parametresi HANGİ hesabın açılacağını belirler (0=ilk, 1=ikinci)
+    // — ona dokunmuyorz. Yalnızca boş "pageId" parametresi kaldırılır (kara
+    // ekran/ERR_INVALID_RESPONSE'un nedeni). Path (/u/N/) olduğu gibi bırakılır.
+    if (isGoogle && (disposition === "foreground-tab" || disposition === "background-tab")) {
+      let target = url;
+      if (u.hostname === "gemini.google.com") {
+        u.searchParams.delete("pageId");
+        target = u.toString().replace(/&?pageId=$/, "");
+      }
+      console.log("[popup] yuklenen:", target);
+      wc.loadURL(target);
+      return { action: "deny" };
+    }
+
+    // Google dışı her adres (auth.openai.com, QR/doğrulama, OAuth sağlayıcıları
+    // vb.) uygulama içinde ayrı pencerede açılır — oturum aynı olduğu için
+    // giriş yapılan hesap panele de yansır.
+    return {
+      action: "allow",
+      overrideBrowserWindowOptions: { autoHideMenuBar: true, width: 560, height: 760 },
+    };
   });
+
 
   const sendState = () => {
     if (!win || win.isDestroyed()) return;
@@ -370,24 +409,42 @@ ipcMain.handle("grid:get-chrome-mode", () => chromeProfile.isEnabled());
 
 // Chrome modunda hesap ekleme: kopya profili gerçek Chrome'da (App-Bound kapalı)
 // açarak hesap girişi/eklemesi yapılır. Tarayıcı kapatılınca çerezler kopyada
-// kalır ve uygulama CDP köprüsü ile onları yeniden okur; paneller YENİLENMEZ —
-// aynı anda toplu reload Google'ı bot sanıp recaptcha gösteriyor. Kullanıcı
-// paneli kendisi yeniler ya da uygulamayı yeniden başlatınca yeni hesap görünür.
-ipcMain.handle("grid:open-chrome-login", () => {
+// kalır ve uygulama CDP köprüsü ile onları yeniden okur; TÜM paneller toplu
+// yenilenmez (aynı anda reload Google'ı bot sanıp recaptcha gösteriyor) — yalnız
+// giriş yapılan panel tazelenir.
+ipcMain.handle("grid:open-chrome-login", (_event, targetUrl) => {
   const chromeLogin = require("./chrome-login");
-  const res = chromeLogin.openLoginChrome(null, { keepChild: true });
+  const focused = webContents.getFocusedWebContents();
+  const focusedUrl = focused && !focused.isDestroyed() ? focused.getURL() : "";
+
+  // Google, gömülü pencerede (Electron) OAuth akışını "cookie settings" hatasıyla
+  // reddediyor. Bu yüzden girişi GERÇEK Chrome'da yaptırıyoruz: odaktaki panel
+  // Google değilse (örn. ChatGPT) o sitede açılır, kullanıcı orada giriş yapar,
+  // Chrome kapanınca çerezler uygulamaya aktarılır.
+  let url = sanitizeUrl(targetUrl);
+  if (!url) {
+    const f = sanitizeUrl(focusedUrl);
+    const isGoogleSite = f && /(^|\.)google\.[a-z.]+$/.test(new URL(f).hostname);
+    if (f && !isGoogleSite) url = f;
+  }
+
+  const res = chromeLogin.openLoginChrome(url, { keepChild: true });
   if (!res.ok) return { ok: false, reason: res.reason || null };
 
   (res.child || {}).on("exit", async () => {
     try {
       const cookies = await chromeSession.readCookiesFromCopy(chromeProfile.destDir());
       await chromeSession.injectCookies(session.defaultSession, cookies);
+      // Google dışı bir sitede giriş yapıldıysa yalnız o paneli tazele
+      if (focused && !focused.isDestroyed() && !/google\./.test(new URL(focusedUrl || "https://x/").hostname)) {
+        focused.reload();
+      }
     } catch (e) {
       console.warn("[chrome-session] çerez yenileme başarısız:", e.message);
     }
   });
 
-  return { ok: true };
+  return { ok: true, url: url || null };
 });
 
 ipcMain.handle("grid:get-installer-lang", () => installerLang());
@@ -564,6 +621,7 @@ ipcMain.on("grid:sleep", (_event, id) => {
 /* ------------------------- Yaşam döngüsü ------------------------- */
 
 app.whenReady().then(async () => {
+  console.log("[ua] session UA:", session.defaultSession.getUserAgent());
   // Chrome oturum köprüsü: kopyadan çözülmüş çerezleri bu session'a aktar.
   // Pencere/paneller bu adımdan SONRA açılır ki Google hesapları girişli gelsin.
   if (chromeProfile.isEnabled()) {

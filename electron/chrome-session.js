@@ -193,7 +193,10 @@ async function injectCookies(session, cookies) {
         // __Host- önekli çerezler (__Host-GSID, __Host-3PSID vb.) kural gereği
         // domain içermez; domain gönderilirse Chromium reddeder ve o çerezler
         // kaybolur (oturum "yarım" görünür). Onlar için domain atlanır.
-        domain: /^__Host-/.test(c.name || "") ? undefined : c.domain || undefined,
+        // CDP, host-only çerezde noktasız ("google.com"), domain çerezde noktalı
+        // (".google.com") döner. Noktasız olanı da domain olarak yazmak çerezi
+        // tüm alt alan adlarına yayardı; host-only ise domain verilmez.
+        domain: /^__Host-/.test(c.name || "") ? undefined : /^\./.test(c.domain || "") ? c.domain : undefined,
         path: c.path || "/",
         secure: !!c.secure,
         httpOnly: !!c.httpOnly,
