@@ -90,6 +90,10 @@ const views = {};
 const lastBounds = {};
 /** @type {Set<number>} */
 const sleeping = new Set();
+/** @type {number[]} panel sırası (ekrandaki konumdan; Ctrl+Tab bu sırayı izler) */
+let panelOrder = [];
+/** @type {number|null} klavye/fare odağının olduğu panel */
+let focusedPanelId = null;
 let appZoom = 0; // panellerin ortak yakınlaştırma seviyesi (0 = %100)
 let autoHideOn = false; // çubuk otomatik gizleniyor mu
 let barRevealed = true; // çubuğun son bilinen görünürlüğü
@@ -159,6 +163,78 @@ function wireZoom(wc) {
       resetViewsZoom();
       event.preventDefault();
     }
+  });
+}
+
+// Chrome'daki sekme geçişi gibi: Ctrl+Tab sonraki panele, Ctrl+Shift+Tab önceki
+// panele. Böylece 4+ panelle aynı prompt'u Ctrl+V → Ctrl+Tab → Ctrl+V ile
+// yapıştırmak için fareye gerek kalmaz.
+function currentPanelIndex(ids) {
+  if (focusedPanelId != null) {
+    const i = ids.indexOf(Number(focusedPanelId));
+    if (i !== -1) return i;
+  }
+  const f = webContents.getFocusedWebContents();
+  if (f && !f.isDestroyed()) {
+    const i = ids.findIndex((id) => views[id].view.webContents.id === f.id);
+    if (i !== -1) return i;
+  }
+  return -1;
+}
+
+function focusPanelTo(id) {
+  const v = views[id];
+  if (!v) return false;
+  focusedPanelId = id;
+  // Panel kaydırılmışsa önce ekrana getirilir: görünmeyen bir görünüme Windows
+  // odak vermez (odak eski panelde kalır). Renderer kaydırmayı yapıp geri
+  // çağırınca odak tekrarlanır.
+  win.webContents.send("grid:focus", { id });
+  v.view.webContents.focus();
+  return true;
+}
+
+function focusPanelBy(delta) {
+  if (!win || win.isDestroyed() || settingsHidden) return false;
+  const ids = panelOrder.filter((id) => views[id] && !sleeping.has(Number(id)));
+  if (!ids.length) return false;
+  const cur = currentPanelIndex(ids);
+  if (cur === -1) return focusPanelTo(ids[0]); // hiçbir panel odakta değil
+  if (ids.length < 2) return false;
+  return focusPanelTo(ids[(cur + delta + ids.length) % ids.length]);
+}
+
+// Ctrl+Tab sırası = ekrandaki sıra: satır başı soldan sağa, sonra alt satıra.
+// 2×4 düzende 1→2→3→4→5→6→7→8, tek satırda 1→2→3→4.
+function updatePanelOrder(rects) {
+  const live = [];
+  for (const r of rects) {
+    const id = Number(r && r.id);
+    if (!views[id] || sleeping.has(id)) continue;
+    if (!(r.width > 4) || !(r.height > 4)) continue; // gizli/uykudaki panel
+    live.push({ id, y: Math.round(r.y), x: Math.round(r.x) });
+  }
+  if (!live.length) return;
+  live.sort((a, b) => a.y - b.y || a.x - b.x);
+  // aynı satırdakiler x'e göre (y'de 1-2px titreme olabilir)
+  const order = [];
+  let row = [live[0]];
+  for (let i = 1; i < live.length; i++) {
+    if (Math.abs(live[i].y - row[0].y) <= 2) row.push(live[i]);
+    else {
+      order.push(row);
+      row = [live[i]];
+    }
+  }
+  order.push(row);
+  panelOrder = order.flat().map((p) => p.id);
+}
+
+function wirePanelSwitch(wc) {
+  wc.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown" || !input.control || input.alt || input.meta) return;
+    if (input.key !== "Tab") return;
+    if (focusPanelBy(input.shift ? -1 : 1)) event.preventDefault();
   });
 }
 
@@ -233,6 +309,7 @@ function startChromeAuth(url, wc) {
 function wireView(view, id) {
   const wc = view.webContents;
   wireZoom(wc);
+  wirePanelSwitch(wc);
 
   // Google QR/doğrulama popup'ları gerçek bir pencerede açılsın; giriş akışları
   // aynı panelde kalır. Popup oturum kapsamını (session) devralır, böylece
@@ -294,6 +371,11 @@ function wireView(view, id) {
       canGoForward: wc.navigationHistory.canGoForward(),
     });
   };
+
+  // Odak hangi panelde (fare tıklaması, Ctrl+Tab veya sayfa yüklenirken)
+  wc.on("focus", () => {
+    focusedPanelId = id;
+  });
 
   wc.on("did-navigate", sendState);
   wc.on("did-navigate-in-page", sendState);
@@ -399,6 +481,9 @@ function createWindow() {
     win.loadFile(path.join(__dirname, "..", "dist", "index.html"));
   }
 
+  // Ctrl+Tab araç çubuğunda/URL alanındayken de çalışsın
+  wirePanelSwitch(win.webContents);
+
   // İlk boyanmadan önce maximize + göster → çerçevesiz değil, Windows'un
   // Win+Up ile yaptığı gibi gerçek kenarlıklı maximize durumunda açılır.
   win.once("ready-to-show", () => {
@@ -479,10 +564,13 @@ ipcMain.on("grid:sync-panels", (_event, panels) => {
   if (!win || !Array.isArray(panels)) return;
   if (panels.length > MAX_VIEWS) panels = panels.slice(0, MAX_VIEWS);
   const active = new Set();
+  // Ctrl+Tab sırası: renderer'ın gönderdiği sıra
+  panelOrder = [];
   for (const p of panels) {
     const id = Number(p && p.id);
     if (!Number.isFinite(id) || id < 0) continue;
     active.add(id);
+    panelOrder.push(id);
     if (!views[id]) {
       const view = createView(id);
       win.contentView.addChildView(view);
@@ -495,7 +583,7 @@ ipcMain.on("grid:sync-panels", (_event, panels) => {
   }
 });
 
-ipcMain.on("grid:set-layout", (_event, rects) => {
+ipcMain.on("grid:set-layout", (_event, rects, order) => {
   if (!Array.isArray(rects) || !win) return;
   for (const r of rects) {
     const v = views[r.id];
@@ -522,7 +610,22 @@ ipcMain.on("grid:set-layout", (_event, rects) => {
       if (v && !sleeping.has(Number(id))) v.view.setVisible(false);
     }
   }
+  if (Array.isArray(order) && order.length) {
+    // Renderer hücre sırasını (satır başı soldan sağa) gönderdi; kaydırma
+    // durumunda da eksiksizdir.
+    panelOrder = order.map((id) => Number(id)).filter((id) => views[id]);
+  } else {
+    updatePanelOrder(rects);
+  }
 });
+
+// Renderer hedef paneli kaydırdı; şimdi odak kesin oraya.
+ipcMain.on("grid:focus-panel", (_event, id) => {
+  const n = Number(id);
+  const v = views[n];
+  if (v && focusedPanelId === n) v.view.webContents.focus();
+});
+
 
 ipcMain.on("grid:navigate", (_event, { id, url }) => {
   const v = views[id];

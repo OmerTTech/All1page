@@ -95,6 +95,7 @@ setx GH_TOKEN "github_pat_..."
 
 ### Version History
 
+- **v1.4.5** — Chrome-like panel switching: `Ctrl+Tab` goes to the next panel, `Ctrl+Shift+Tab` to the previous one, in row-major order (in 2×4: 1→2→3→4→5→6→7→8), so the same prompt can be pasted into every panel with `Ctrl+V` → `Ctrl+Tab` → `Ctrl+V` and no mouse. Works with 8 or more panels and while the toolbar has focus. A panel that sits outside the visible area is scrolled into view just enough to take focus
 - **v1.4.4** — The app now uses its own empty Google profile instead of copying your personal Chrome profile, so "Add account" only shows the accounts you added to the app. Those accounts persist across restarts. Google does not allow signing in inside an embedded window, so "Sign in with Google" on a site like ChatGPT now runs in real Chrome on the app's own profile: close Chrome and the panel refreshes, already signed in. Your personal Chrome is never opened
 - **v1.4.3** — Reverted, use v1.4.4
 - **v1.4.2** — Accounts now show up without re-login, re-install or moving data: instead of always reading `Default`, the app reads **every** profile folder in the copied profile that actually holds a cookie DB (`Default` first, then legacy `Profile N` folders left behind by older versions, merged and de-duplicated). A machine whose Chrome copy wrote its cookies to `Profile 2` now gets its accounts picked up on the next start — nothing to uninstall, nothing to sign in again
@@ -234,6 +235,7 @@ tarayıcı görünümü** (Electron `WebContentsView` + `persist:` session parti
 
 ### Sürüm Geçmişi
 
+- **v1.4.5** — Chrome tarzı panel geçişi: `Ctrl+Tab` bir sonraki panele, `Ctrl+Shift+Tab` öncekine gidiyor ve sıra satır başı soldan sağa (2×4'te 1→2→3→4→5→6→7→8). Aynı prompt'u her panele `Ctrl+V` → `Ctrl+Tab` → `Ctrl+V` ile, fare kullanmadan yapıştırabilirsin. 8 ve daha fazla panelde de çalışıyor, araç çubuğundayken de. Görünmeyen panel odak alabilsin diye gerektiği kadar kaydırılıyor
 - **v1.4.4** — Uygulama artık senin kişisel Chrome profilini kopyalamıyor, kendi boş profilini kullanıyor; "Hesap ekle"de sadece uygulamaya eklediğin hesaplar görünüyor ve bu hesaplar her açılışta kalıcı. Google gömülü pencerede girişe izin vermediği için "Google ile giriş yap" artık uygulamanın kendi profilinde gerçek Chrome'da yapılıyor; Chrome'u kapatınca panel girişli halde tazeleniyor. Senin Chrome'un hiç açılmıyor
 - **v1.4.3** — Geri alındı, yerine v1.4.4
 - **v1.4.2** — Hesaplar artık yeniden giriş yapmadan, kaldırmadan ve veri taşımadan görünüyor: uygulama `Default`'ı okumakla kalmayıp kopya profilde **gerçekten çerez dosyası bulunan tüm profil klasörlerini** okuyor (önce `Default`, sonra eski sürümlerden kalan `Profile N` klasörleri; çerezler birleştirilip tekrarlar ayıklanıyor). Çerezlerini `Profile 2`'ye yazmış bir bilgisayar da uygulamayı bir sonraki açılışta hesapları görür — ne kurulum silmeye ne tekrar girişe gerek var
@@ -308,6 +310,7 @@ setx GH_TOKEN "github_pat_..."
 
 ### Versiya tarixçəsi
 
+- **v1.4.5** — Chrome üslü panel keçidi: `Ctrl+Tab` növbəti panellə keçir, `Ctrl+Shift+Tab` əvvəlki panelə, sıra isə sətır başından sağa (2×4-də 1→2→3→4→5→6→7→8). Eyni promptu hər panelyə `Ctrl+V` → `Ctrl+Tab` → `Ctrl+V` ilə, siçan istifadə etmədən yapışdıra bilərsən. 8 və daha çox paneldə də, alətlər zolağı fokusdayken də işləyir. Görünməyən panel fokus ala bilsin deyə lazım qədər sürüşdürülür
 - **v1.4.4** — Tətbiq artıq sənin şəxsi Chrome profilini kopyalamır, öz boş profilini istifadə edir; "Hesab əlavə et"də yalnız tətbiqə əlavə etdiyin hesablar görünür və bu hesablar hər açılışda qalıcıdır. Google gömülü pəncərədə girişə icazə vermədiyi üçün "Google ilə giriş et" indi tətbiqin öz profilində real Chrome-da aparılır; Chrome-u bağlayanda panel girişli yenilənir. Sənin Chrome-un heç açılmır
 - **v1.4.3** — Geri alındı, yerinə v1.4.4
 - **v1.4.2** — Hesablar indi təkrar daxil olmadan, quraşdırmanı silmədən və məlumatı köçürmədən görünür: tətbiq sadəcə `Default`-ı oxumur, kopya profildə **həqiqətən çerez faylı olan bütün profil qovluqlarını** oxuyur (əvvəlcə `Default`, sonra köhnə versiyalardan qalan `Profile N` qovluqları; çerezlər birləşdirilir və təkrar olanlar atılır). Çerezlərini `Profile 2`-yə yazmış kompüter də tətbiqi növbəti açanda hesablarını görür — nə quraşdırmanı silmək, nə də təkrar daxil olmaq lazım deyil

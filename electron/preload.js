@@ -6,8 +6,8 @@ contextBridge.exposeInMainWorld("grid", {
   syncPanels(panels) {
     ipcRenderer.send("grid:sync-panels", panels);
   },
-  setLayout(rects) {
-    ipcRenderer.send("grid:set-layout", rects);
+  setLayout(rects, order) {
+    ipcRenderer.send("grid:set-layout", rects, order);
   },
   navigate(id, url) {
     ipcRenderer.send("grid:navigate", { id, url });
@@ -47,6 +47,14 @@ contextBridge.exposeInMainWorld("grid", {
     const listener = (_event, state) => callback(state);
     ipcRenderer.on("grid:state", listener);
     return () => ipcRenderer.removeListener("grid:state", listener);
+  },
+  onFocus(callback) {
+    const listener = (_event, state) => callback(state);
+    ipcRenderer.on("grid:focus", listener);
+    return () => ipcRenderer.removeListener("grid:focus", listener);
+  },
+  focusPanel(id) {
+    ipcRenderer.send("grid:focus-panel", id);
   },
   onUpdateStatus(callback) {
     const listener = (_event, state) => callback(state);

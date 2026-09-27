@@ -152,6 +152,16 @@ export function useGridPanels() {
     url: urlsById[id] || defaultUrl,
   }));
 
+  // Ctrl+Tab sırası: satır başı soldan sağa. Grid kaydırıldığında üst satır
+  // ekrandan çıkar, bu yüzden sıra koordinattan değil hücre sırasından üretilir.
+  const visualOrder = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const id = cells[`${r}:${c}`];
+      if (id != null) visualOrder.push(id);
+    }
+  }
+
   // Layout düğmesine (2×2 / 1×4 / Custom) basınca sığmayan panelleri boş
   // hücrelere taşı (reflow). Boş hücreler boş bırakılır; kullanıcı ▶ ile açmadan
   // yeni WebContentsView oluşturulmaz (performans + tutarlı davranış).
@@ -206,7 +216,7 @@ export function useGridPanels() {
       }
       return { id, x: r.left, y, width: r.width, height };
     });
-    api.setLayout(rects);
+    api.setLayout(rects, visualOrder);
   };
 
   const syncPanels = () => {
@@ -253,6 +263,17 @@ export function useGridPanels() {
         next[s.id] = s.url;
         return next;
       });
+    });
+  }, []);
+
+  // Ctrl+Tab hedef paneli: kaydırılmışsa ekrana getir, sonra odağı ver.
+  useEffect(() => {
+    const api = window.grid;
+    if (!api?.onFocus) return;
+    return api.onFocus(({ id }) => {
+      const el = slotRefs.current[id];
+      if (el) el.scrollIntoView({ block: "nearest", inline: "nearest" });
+      api.focusPanel?.(id);
     });
   }, []);
 
