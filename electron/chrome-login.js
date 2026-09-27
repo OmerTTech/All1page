@@ -115,6 +115,12 @@ function openLoginChrome(url, opts) {
   console.log("[chrome-login] Kopya profil:", target);
   const args = [
     `--user-data-dir=${target}`,
+    // Profil bayrağı ZORUNLU: verilmezse Chrome, kopya profilin "Local State"
+    // içindeki "son kullanılan profil" bilgisine uyar (profile.last_used). O
+    // "Profile 2" ise çerezler Profile 2'ye yazılır, ama chrome-session.js
+    // her zaman Default'ı okuyordu -> Chrome'da hesap görünür, uygulamada
+    // görünmez. Burada da Default'a sabitliyoruz; iki taraf hep aynı profil.
+    "--profile-directory=Default",
     "--disable-features=AppBoundEncryption",
     "--no-first-run",
     "--no-default-browser-check",

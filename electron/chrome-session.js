@@ -130,7 +130,10 @@ async function injectCookies(session, cookies) {
         url: "https://" + host + (c.path || "/"),
         name: c.name,
         value: c.value,
-        domain: c.domain || undefined,
+        // __Host- önekli çerezler (__Host-GSID, __Host-3PSID vb.) kural gereği
+        // domain içermez; domain gönderilirse Chromium reddeder ve o çerezler
+        // kaybolur (oturum "yarım" görünür). Onlar için domain atlanır.
+        domain: /^__Host-/.test(c.name || "") ? undefined : c.domain || undefined,
         path: c.path || "/",
         secure: !!c.secure,
         httpOnly: !!c.httpOnly,
