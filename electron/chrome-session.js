@@ -58,18 +58,47 @@ async function waitForPort(port, timeoutMs) {
   throw new Error("Chrome CDP port acilmadi");
 }
 
-// Kopya profil dizinindeki headless Chrome'u açar ve Network.getAllCookies ile
-// çözülmüş tüm çerezleri döndürür. Chrome'u açılışta kapatır.
-async function readCookiesFromCopy(copyDir) {
-  const exe = chromeExe();
-  if (!exe) throw new Error("chrome.exe bulunamadi");
-  if (!fs.existsSync(copyDir)) throw new Error("Kopya profil yok: " + copyDir);
+// Kopya profilde hangi profil klasörlerinde GERÇEKTEN çerez dosyası var?
+// v1.4.1'e kadar yazan taraf "son kullanılan profil"e uyuyordu; o bilgisayarlarda
+// çerezler "Profile 2" gibi bir klasörde kalır. Kullanıcı yeniden giriş yapmak
+// (veya veri taşımak) zorunda kalmaması için Default'ın yanında bu eski
+// klasörler de okunur. Default her zaman ilk sırada gelir, çakışmada o kazanır.
+function profileDirsWithCookies(copyDir) {
+  const hasCookies = (name) => {
+    try {
+      const f = path.join(copyDir, name, "Network", "Cookies");
+      return fs.existsSync(f) && fs.statSync(f).size > 0;
+    } catch {
+      return false;
+    }
+  };
 
+  const out = [];
+  if (hasCookies("Default")) out.push("Default");
+
+  let entries = [];
+  try {
+    entries = fs.readdirSync(copyDir, { withFileTypes: true });
+  } catch {
+    /* okunamadı */
+  }
+  for (const e of entries) {
+    if (!e.isDirectory()) continue;
+    if (e.name === "Default" || !/^Profile \d+$/.test(e.name)) continue;
+    if (hasCookies(e.name)) out.push(e.name);
+  }
+
+  return out.length ? out : ["Default"];
+}
+
+// Tek bir profil klasörünü headless Chrome ile açar, Network.getAllCookies ile
+// çözülmüş çerezleri döndürür. Chrome'u çağrı sonunda kapatır.
+async function readCookiesFromProfile(exe, copyDir, profileDir, port) {
   const chrome = spawn(exe, [
     "--headless=new",
-    `--remote-debugging-port=${CDP_PORT}`,
+    `--remote-debugging-port=${port}`,
     `--user-data-dir=${copyDir}`,
-    "--profile-directory=Default",
+    `--profile-directory=${profileDir}`,
     "--disable-features=AppBoundEncryption",
     "--no-first-run",
     "--no-default-browser-check",
@@ -79,7 +108,7 @@ async function readCookiesFromCopy(copyDir) {
 
   let ws;
   try {
-    const page = await waitForPort(CDP_PORT, 20000);
+    const page = await waitForPort(port, 20000);
     ws = new WebSocket(page.webSocketDebuggerUrl);
     await new Promise((res, rej) => {
       ws.onopen = res;
@@ -107,6 +136,37 @@ async function readCookiesFromCopy(copyDir) {
     try { ws && ws.close(); } catch { /* yoksay */ }
     chrome.kill();
   }
+}
+
+// Kopya profildeki (çerez dosyası bulunan) TÜM profilleri okur ve çerezleri
+// birleştirir. Profil klasörü başına ayrı CDP portu kullanılır; bir profil
+// açılamazsa diğerleri yine okunur.
+async function readCookiesFromCopy(copyDir) {
+  const exe = chromeExe();
+  if (!exe) throw new Error("chrome.exe bulunamadi");
+  if (!fs.existsSync(copyDir)) throw new Error("Kopya profil yok: " + copyDir);
+
+  const dirs = profileDirsWithCookies(copyDir);
+  if (dirs.length > 1) {
+    console.log("[chrome-session] çerez olan profiller:", dirs.join(", "));
+  }
+
+  const merged = new Map();
+  for (let i = 0; i < dirs.length; i++) {
+    let got = [];
+    try {
+      got = await readCookiesFromProfile(exe, copyDir, dirs[i], CDP_PORT + i);
+    } catch (e) {
+      console.warn(`[chrome-session] ${dirs[i]} profili okunamadı:`, e.message);
+      continue;
+    }
+    console.log(`[chrome-session] ${dirs[i]}: ${got.length} çerez`);
+    for (const c of got) {
+      const key = `${c.domain || ""}|${c.path || "/"}|${c.name || ""}`;
+      if (!merged.has(key)) merged.set(key, c);
+    }
+  }
+  return [...merged.values()];
 }
 
 const SAME_SITE_MAP = {
@@ -147,4 +207,4 @@ async function injectCookies(session, cookies) {
   return { loaded, failed };
 }
 
-module.exports = { readCookiesFromCopy, injectCookies, chromeExe, CDP_PORT };
+module.exports = { readCookiesFromCopy, injectCookies, chromeExe, CDP_PORT, profileDirsWithCookies };
